@@ -53,6 +53,6 @@ subroutine Filelen(N, filename)
      if (iostat /= 0) exit
      N = N + 1
   end do
-  close(11)
+  close(11) !...backspace instead of close? 
   
 end subroutine Filelen
