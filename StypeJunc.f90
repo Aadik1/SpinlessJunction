@@ -1,18 +1,26 @@
-program StypeJunction_one
+program StypeJunction_Spinless
   use DefineHamiltonian
   use GreensFunctions
   implicit none
-  real*8 :: V1, Current, start_time, end_time
-  integer ::  k, i
+  real*8 :: V1, Current, total_time
+  integer ::  k, i, start_tick, end_tick, rate, max_count
   character(len=1) :: Spin_orbit
   character(len=30) :: vfn
 
 !.......................Reads all the bond parameters ,length of the molecule etc. 
   
-  !.........................Deifnes Hamiltonian
+ !....creates runtime datasheet 
   open(22, file='runtime_datasheet.dat', status='unknown')  
-  call CPU_TIME(start_time)
+  call SYSTEM_CLOCK(COUNT_RATE=rate, COUNT_MAX=max_count)
+  if (rate .eq. 0) then
+     print *, "Error: SYSTEM_CLOCK not supported or rate is 0."
+     stop
+  end if
+  call SYSTEM_CLOCK(COUNT=start_tick)
 
+  write(22,*) '>>>>>>>>>>>>>>>>>>>>>>>>>>>>','Runtime Data Sheet','>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+
+  !.........................Deifnes Hamiltonian
   call input()
   
   allocate(H(Natoms,Natoms))
@@ -88,9 +96,13 @@ program StypeJunction_one
   close(30) 
   ! close(3)
 
-  call CPU_TIME(end_time)
+  call SYSTEM_CLOCK(COUNT=end_tick)
+  total_time = real(end_tick - start_tick)/real(rate)
+  total_time = total_time/60.d0
 
-  write(22,*) 'Total Runtime:', (start_time-end_time), 'mins'
+  write(22,*) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+  write(22,*) 'Total Runtime:', total_time, 'mins'
+  write(22,*) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
   close(22)
   deallocate(GFf%L, GFf%G,GFf%R, GFf%A)
   deallocate(GF0%r, GF0%a, GF0%L, GF0%G) 
@@ -98,6 +110,4 @@ program StypeJunction_one
   deallocate(H, Hub, omega)
   !deallocate(SigmaL, SigmaR)
   deallocate(GammaL, GammaR, G_nil)
-end program StypeJunction_one
-
-
+end program StypeJunction_Spinless
