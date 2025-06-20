@@ -1,5 +1,6 @@
 module GreensFunctions
-  use DefineHamiltonian 
+  use DefineHamiltonian
+  use OMP_LIB
   implicit none
   integer :: INFO
 

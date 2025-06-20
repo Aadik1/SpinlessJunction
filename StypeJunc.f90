@@ -2,14 +2,16 @@ program StypeJunction_one
   use DefineHamiltonian
   use GreensFunctions
   implicit none
-  real*8 :: V1, Current
+  real*8 :: V1, Current, start_time, end_time
   integer ::  k, i
   character(len=1) :: Spin_orbit
   character(len=30) :: vfn
 
 !.......................Reads all the bond parameters ,length of the molecule etc. 
   
-!.........................Deifnes Hamiltonian 
+  !.........................Deifnes Hamiltonian
+  open(22, file='runtime_datasheet.dat', status='unknown')  
+  call CPU_TIME(start_time)
 
   call input()
   
@@ -84,8 +86,12 @@ program StypeJunction_one
   end do
 
   close(30) 
- ! close(3)
-  
+  ! close(3)
+
+  call CPU_TIME(end_time)
+
+  write(22,*) 'Total Runtime:', (start_time-end_time), 'mins'
+  close(22)
   deallocate(GFf%L, GFf%G,GFf%R, GFf%A)
   deallocate(GF0%r, GF0%a, GF0%L, GF0%G) 
   deallocate(work1, work2, work3)
