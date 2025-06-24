@@ -4,4 +4,4 @@ all:
 
 clear: 
 
-	rm -f sf* *.o *.mod *.out *~ iteration* fort* err* Volt_Current_*
+	rm -f sf* *.o *.mod *.out *~ iteration* fort* err* Volt_Current_* Print.dat SpinlessJunction.*

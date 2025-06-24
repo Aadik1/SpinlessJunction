@@ -4,7 +4,6 @@ program StypeJunction_Spinless
   implicit none
   real*8 :: V1, Current, total_time
   integer ::  k, i, start_tick, end_tick, rate, max_count
-  character(len=1) :: Spin_orbit
   character(len=30) :: vfn
 
 !.......................Reads all the bond parameters ,length of the molecule etc. 
@@ -82,7 +81,7 @@ program StypeJunction_Spinless
   
 !.......................Calculates and plots Voltage vs Current curve  
 
-  !open(3, file='Print.dat', status='replace')
+  !open(3, file='Print.dat', status='unknown')
   write(vfn,'(i0)') order
   open(30, file='Volt_Current_'//trim(vfn)//'.dat', status='unknown')  
 !  print *, 'Pre-voltage' 
