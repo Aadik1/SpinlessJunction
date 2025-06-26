@@ -44,12 +44,12 @@ program StypeJunction_Spinless
   allocate(Ev(Natoms))
 
   Eigenvec = H
-  call eigen_symm_matrix(Eigenvec, Natoms, Ev)
+  call complex_eigen_symm_martix(Eigenvec, Natoms, Ev)
 
   w_init = Ev(1)-dw
   w_fin = Ev(Natoms)+up
   N_of_w = (w_fin - w_init)/delta
-  
+  write(*,*) 'N_of_w:', N_of_w, 'w_fin:', w_fin, 'w_init:', w_init
   allocate(omega(N_of_w))
 
   do i = 1, N_of_w 
@@ -81,20 +81,20 @@ program StypeJunction_Spinless
   
 !.......................Calculates and plots Voltage vs Current curve  
 
-  !open(3, file='Print.dat', status='unknown')
+  open(3, file='Print.dat', status='unknown')
   write(vfn,'(i0)') order
   open(30, file='Volt_Current_'//trim(vfn)//'.dat', status='unknown')  
-!  print *, 'Pre-voltage' 
+  !  print *, 'Pre-voltage' 
   do k = 0, Volt_range
      V1 = V + k*0.05
-  call SCF_GFs(V1)
+     call SCF_GFs(V1)
      write(30, *) V1, Current(V1)
      print *, 'Progress:', k/(Volt_range*0.01), '%', Current(V1)
   end do
-
+  
   close(30) 
-  ! close(3)
-
+  close(3)
+  
   call SYSTEM_CLOCK(COUNT=end_tick)
   total_time = real(end_tick - start_tick)/real(rate)
   total_time = total_time/60.d0

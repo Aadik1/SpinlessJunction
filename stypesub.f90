@@ -11,7 +11,7 @@ subroutine input()
   read(2,*) Natoms
   write(*,*) 'Order:', order, 'Natoms:', Natoms
   read(2,*) dw,up,delta
-  write(*,*) dw,up,delta
+  write(*,*) 'dw:', dw, 'up:', up,'delta:', delta
   read(2,*) pullay
   write(*,*) pullay
   read(2,'(a)') ver

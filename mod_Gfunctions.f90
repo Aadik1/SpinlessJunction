@@ -5,7 +5,7 @@ module GreensFunctions
   integer :: INFO
 
   real*8, parameter :: epsilon = 1e-6
-  real*8, allocatable, dimension(:) :: Ev, Hub
+  real*8, allocatable, dimension(:) ::  Hub, Ev
   real*8, allocatable, dimension(:) :: omega
   real*8 :: pullay
   
@@ -13,8 +13,8 @@ module GreensFunctions
   complex*16, allocatable, dimension(:) :: G_nil
 !  complex*16, allocatable, dimension(:,:) ::  SigmaL, SigmaG, SigmaR
   complex*16, allocatable, dimension(:,:) ::  SigmaL, SigmaR
-!  complex*16, allocatable, dimension(:,:) :: work1, work2, work3, work4
   complex*16, allocatable, dimension(:,:) :: work1, work2, work3
+  
   
   complex*16  :: prodr, proda, prodL, prodG
   complex*16  :: IntL, IntG, OmCon, OmCon1, Om_Con_Inf
@@ -63,7 +63,7 @@ CONTAINS
        call Hermitian_Conjg(work1, Natoms, work2)
        
        GF0%r(:,:,j) = work1
-       GF0%a(:,:,j) = work2       
+       GF0%a(:,:,j) = work2
     end do
   end subroutine G0_R_A
   
@@ -165,6 +165,7 @@ CONTAINS
   GFf%L(:,:,iw) = matmul(matmul(w1, SigmaL), w2) !.. GL = Keldysh 1st term + Gr * SigmaL * Ga 
 !  GFf%G(:,:,iw) = matmul(matmul(work1, SigmaG), work2) !.. GG = Gr * SigmaG * Ga
   GFf%G = GFf%L + GFf%R - GFf%A
+  
 end subroutine G_full
 
 !=====================================================
@@ -190,9 +191,12 @@ end subroutine G_full
 
        end do
     end do
-    
+
     pp = delta/(2.d0*pi) !LK <== error in brackets
     Omega_R = Omr*pp*pp
+  !  write(3,*) '-----------Omega_R------------'
+  !  write(3,*) Omega_R
+  !  write(3,*) '------------------------------'
   end function Omega_R
   
   subroutine Omega_int_SigL_SigG(i,j, iw, SigL, SigG) !... interaction contributions of Eq. (3) and (4) in CHE
@@ -213,8 +217,12 @@ end subroutine G_full
           end if
        end do
     end do
+    
     SigL = SigL*pp*pp 
-!    SigG = SigG*pp*pp 
+    !    SigG = SigG*pp*pp
+  !  write(3,*) '-----------SigL------------'
+  !  write(3,*) SigL
+  !  write(3,*) '---------------------------'
   end subroutine Omega_int_SigL_SigG
 
 !====================================================
@@ -271,6 +279,22 @@ subroutine SCF_GFs(Volt)
      end do
      !$OMP END PARALLEL DO
      
+     write(3,*) '-----------G0 Retarded PreSCF------------'
+     write(3,*) GF0%r(1,1,1), GF0%r(2,2,1), GF0%r(3,3,1)
+     write(3,*) '-----------------------------------------'
+     
+     write(3,*) '---------G0 Lesser PreSCF------------'
+     write(3,*) GF0%L(1,1,1), GF0%L(2,2,1), GF0%L(3,3,1)
+     write(3,*) '-------------------------------------'
+     
+     write(3,*) '-----------GF Retarded PreSCF------------'
+     write(3,*) GFf%r(1,1,1), GFf%r(2,2,1), GFf%r(3,3,1)
+     write(3,*) '-----------------------------------------'
+     
+     write(3,*) '-----------GF Lesser PreSCF--------------'
+     write(3,*) GFf%L(1,1,1), GFf%L(2,2,1), GFf%L(3,3,1)
+     write(3,*) '-----------------------------------------'
+     
      if(verb) then
         call print_3matrix(iteration,GFf%R,'GFR')
         call print_3matrix(iteration,GFf%L,'GFL')
@@ -297,6 +321,16 @@ subroutine SCF_GFs(Volt)
      GF0%G = GF0%L + GF0%R - GF0%A
      !$OMP END CRITICAL
      
+     
+     write(3,*) '-----------G0 Retarded Mixing------------'
+     write(3,*) GF0%r(1,1,1), GF0%r(2,2,1), GF0%r(3,3,1)
+     write(3,*) '-----------------------------------------'
+     
+     write(3,*) '---------G0 Lesser Mixing------------'
+     write(3,*) GF0%L(1,1,1), GF0%L(2,2,1), GF0%L(3,3,1)
+     write(3,*) '-------------------------------------'
+     
+     
 !LK printing the spectral function
 
      call print_sf(iteration)  
@@ -317,7 +351,7 @@ subroutine GL_of_0()        !LK <======= a slight change
   real*8 :: pp
   complex*16 :: s
 
-  pp=delta/(2*pi)
+  pp=delta/(2.d0*pi)
   do i = 1, Natoms 
      s =(0.d0, 0.d0)
      do k1 = 1, N_of_w
@@ -325,7 +359,10 @@ subroutine GL_of_0()        !LK <======= a slight change
      end do
      G_nil(i)=s*pp
   end do
-  
+
+  write(3,*) '----------------G_nil-------------------'
+  write(3,*) G_nil(1), G_nil(2), G_nil(3)
+  write(3,*) '----------------G_nil-------------------'
 end subroutine GL_of_0
 
 !====================================================

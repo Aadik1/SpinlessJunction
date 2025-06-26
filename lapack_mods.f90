@@ -72,6 +72,46 @@ subroutine eigen_symm_matrix(A,N,E)
   end if
 end subroutine eigen_symm_matrix
 
+subroutine complex_eigen_symm_martix(A,N,E)
+!...............................................
+!  Complex eigenporoblem: A*X=E*X 
+!...............................................
+! INPUT
+! A,S - Hermitian matrices;
+!  INFO = 0 - succeeded  
+!  INFO =/= 0 - not succeeded
+!...............................................
+! OUTPUT
+!  (i) eigenvectors of A are in columns of A
+!      (the original A is destroyed)
+!  (ii) eigenvalues of A are in E
+!...............................................
+  
+  implicit none
+  integer :: N,INFO,LWORK
+  complex*16,dimension(:),allocatable ::  WORK
+  real*8, dimension(:),allocatable :: RWORK
+  complex*16 :: A(N,N)
+  real*8 :: E(N)
+  
+!_______ determine first the dimension of WORK and then compute
+
+  allocate(WORK(1)); allocate(RWORK(3*N-2))  
+  call ZHEEV('V','U',N,A,N,E,WORK,-1,RWORK,INFO)
+  LWORK=int(WORK(1))
+!  write(*,*) LWORK
+  deallocate(WORK)
+  allocate(WORK(LWORK))
+  call ZHEEV('V','U',N,A,N,E,WORK,LWORK,RWORK,INFO)
+  deallocate(WORK)
+  deallocate(RWORK)
+  if(INFO.eq.0) then
+     write(9,*)'... eigenproblem successful'
+  else
+     write(*,*)'... eigenproblem UNsuccessful' ; stop
+  end if
+end subroutine complex_eigen_symm_martix
+
 subroutine inverse_root(N,A,INFO,case)
 !...............................................................
 ! INPUT
