@@ -234,13 +234,25 @@ end subroutine G_full
 subroutine SCF_GFs(Volt)
   implicit none
   integer :: iw, iteration,i, Vname
-  real*8 :: Volt, err, diff
+  real*8 :: Volt, err, diff, st, et
   character(len=30) :: fn, fn1 
 
-  iteration = 0  
-  call G0_R_A()
-  call G0_L_G(Volt)
+  iteration = 0
 
+  write(22,*) '........SCF Calculations at Voltage:', Volt, '..........'
+  
+  st =0.d0; et= 0.d0
+  call CPU_TIME(st)
+  call G0_R_A()
+  call CPU_TIME(et)
+  write(22,'(A,F10.8,A,A,A,I4)') 'G0_R_A runtime:', (et-st), 'seconds', '   ', 'Iteration:', iteration
+  
+  st =0.d0; et= 0.d0
+  call CPU_TIME(st)
+  call G0_L_G(Volt)
+  call CPU_TIME(et)
+  write(22,'(A,F10.8,A,A,A,I4)') 'G0_L_G runtime:', (et-st), 'seconds', '   ', 'Iteration:', iteration
+ 
   print *, '>>>>>>>>>>VOLTAGE:', Volt
 
   if(verb) then
@@ -268,8 +280,14 @@ subroutine SCF_GFs(Volt)
 !.......real variable interactions turns off the Interaction component of the sigmas 
 !.................full Gr and Ga, Eq. (5) and (6)
 
-     write(3,'(/a,i3,i5/)') 'iteration = ',iteration
+     st =0.d0; et= 0.d0
+     call CPU_TIME(st)
      call GL_of_0()
+     call CPU_TIME(et)
+     write(22,'(A,F10.8,A,A,A,I4)') 'GL_of_0 runtime:', (et-st), 'seconds', '   ','Iteration:', iteration
+     
+     st = 0.d0; et = 0.d0
+     st = OMP_GET_WTIME()
 
      !$OMP PARALLEL DO &
      !$OMP& PRIVATE(iw, INFO)
@@ -294,6 +312,10 @@ subroutine SCF_GFs(Volt)
      write(3,*) '-----------GF Lesser PreSCF--------------'
      write(3,*) GFf%L(1,1,1), GFf%L(2,2,1), GFf%L(3,3,1)
      write(3,*) '-----------------------------------------'
+     
+     et = OMP_GET_WTIME()
+     write(22,'(A,F10.8,A,A,A,I4)') 'G_full w-loop runtime:', (et-st), 'seconds', '   ', 'Iteration:', iteration
+     
      
      if(verb) then
         call print_3matrix(iteration,GFf%R,'GFR')
