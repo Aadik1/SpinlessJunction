@@ -45,8 +45,33 @@ CONTAINS
 !=====================================================
 !======== Non-interacting GFs ========================
 !=====================================================  
+
   
- subroutine G0_R_A()
+  !......Calculates lesser Greens function at time = 0
+  subroutine GL_of_0()        !LK <======= a slight change
+    !.....Lesser Greens function at time = 0
+    !.....ei - eigenvalues of the Hamiltonian 
+    implicit none
+    integer :: i, k1
+    real*8 :: pp
+    complex*16 :: s
+    
+    pp=delta/(2.d0*pi)
+    do i = 1, Natoms 
+       s =(0.d0, 0.d0)
+       do k1 = 1, N_of_w
+          s = s + GF0%L(i,i,k1)
+       end do
+       G_nil(i)=s*pp
+    end do
+
+    write(3,*) '----------------G_nil-------------------'
+    write(3,*) G_nil(1), G_nil(2), G_nil(3)
+    write(3,*) '----------------G_nil-------------------'
+  end subroutine GL_of_0
+  
+  
+  subroutine G0_R_A()
     !............non-interacting Greens functions: GR and Ga,  Eq. (5) and Eq. (6) in 'Current_Hubbard_Equations' document (CHE)
     implicit none
     integer :: j, i
@@ -65,6 +90,12 @@ CONTAINS
        GF0%r(:,:,j) = work1
        GF0%a(:,:,j) = work2
     end do
+
+    write(3,*) '-----------G0 Retarded Subroutine------------'
+    write(3,*) GF0%r(1,1,1), GF0%r(2,2,1), GF0%r(3,3,1)
+    write(3,*) '-----------------------------------------'
+    
+    
   end subroutine G0_R_A
   
   subroutine G0_L_G(Volt)
@@ -84,6 +115,11 @@ CONTAINS
        GF0%L(:,:,j) = work3
 !       GF0%G(:,:,j) = work4
     end do
+    
+    write(3,*) '---------G0 Lesser Subroutine------------'
+    write(3,*) GF0%L(1,1,1), GF0%L(2,2,1), GF0%L(3,3,1)
+    write(3,*) '-------------------------------------'
+     
     GF0%G =  GF0%L + GF0%R - GF0%A
   end subroutine G0_L_G
   
@@ -130,6 +166,19 @@ CONTAINS
       end do
    end if
 
+   
+   write(3,*) '-----------SigmaR------------'
+       do i=1,Natoms
+         write(3,*) i, (SigmaR(i,j),j=1,Natoms)
+      end do
+   write(3,*) '------------------------------'
+   
+   write(3,*) '-----------SigmaL------------'
+   do i=1,Natoms
+      write(3,*) i, (Sigmal(i,j),j=1,Natoms)
+   end do
+   write(3,*) '------------------------------'
+   
    if(verb) then
       write(3,*) iw,' SigmaR'
       do i=1,Natoms
@@ -231,11 +280,12 @@ end subroutine G_full
 
 !.............need G0f%L to calculate GL_of_0
 !.............Calculates GFs at every omega and Voltage simultaneously 
-subroutine SCF_GFs(Volt)
+subroutine SCF_GFs(Volt, first)
   implicit none
   integer :: iw, iteration,i, Vname
   real*8 :: Volt, err, diff, st, et
-  character(len=30) :: fn, fn1 
+  character(len=30) :: fn, fn1
+  logical :: first
 
   iteration = 0
 
@@ -297,14 +347,6 @@ subroutine SCF_GFs(Volt)
      end do
      !$OMP END PARALLEL DO
      
-     write(3,*) '-----------G0 Retarded PreSCF------------'
-     write(3,*) GF0%r(1,1,1), GF0%r(2,2,1), GF0%r(3,3,1)
-     write(3,*) '-----------------------------------------'
-     
-     write(3,*) '---------G0 Lesser PreSCF------------'
-     write(3,*) GF0%L(1,1,1), GF0%L(2,2,1), GF0%L(3,3,1)
-     write(3,*) '-------------------------------------'
-     
      write(3,*) '-----------GF Retarded PreSCF------------'
      write(3,*) GFf%r(1,1,1), GFf%r(2,2,1), GFf%r(3,3,1)
      write(3,*) '-----------------------------------------'
@@ -360,32 +402,10 @@ subroutine SCF_GFs(Volt)
         write(*,*)'... REACHED REQUIRED ACCURACY ...'
         exit
      end if
+     !STOP
   END DO
   close(17)
 end subroutine SCF_GFs
-
-!......Calculates lesser Greens function at time = 0
-subroutine GL_of_0()        !LK <======= a slight change
-  !.....Lesser Greens function at time = 0
-  !.....ei - eigenvalues of the Hamiltonian 
-  implicit none
-  integer :: i, k1
-  real*8 :: pp
-  complex*16 :: s
-
-  pp=delta/(2.d0*pi)
-  do i = 1, Natoms 
-     s =(0.d0, 0.d0)
-     do k1 = 1, N_of_w
-        s = s + GF0%L(i,i,k1)
-     end do
-     G_nil(i)=s*pp
-  end do
-
-  write(3,*) '----------------G_nil-------------------'
-  write(3,*) G_nil(1), G_nil(2), G_nil(3)
-  write(3,*) '----------------G_nil-------------------'
-end subroutine GL_of_0
 
 !====================================================
 !========== Self consistency field calculations =====

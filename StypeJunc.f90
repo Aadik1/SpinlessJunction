@@ -5,6 +5,7 @@ program StypeJunction_Spinless
   real*8 :: V1, Current, total_time
   integer ::  k, i, start_tick, end_tick, rate, max_count
   character(len=30) :: vfn
+  logical :: first
 
 !.......................Reads all the bond parameters ,length of the molecule etc. 
   
@@ -36,6 +37,8 @@ program StypeJunction_Spinless
      Hub(i) = Gamma0/10.d0 !...read(11, *) Hub(i)
   end do
   close(11)
+
+  print *, 'HUBBARD:', Hub
 
 !.......................Finds the eigenvalues of the Central Hamiltonian and uses
 !                       it to define the w-grid
@@ -84,10 +87,17 @@ program StypeJunction_Spinless
   open(3, file='Print.dat', status='unknown')
   write(vfn,'(i0)') order
   open(30, file='Volt_Current_'//trim(vfn)//'.dat', status='unknown')  
-  !  print *, 'Pre-voltage' 
+  !  print *, 'Pre-voltage'
+  first=.true.
   do k = 0, Volt_range
      V1 = V + k*0.05
-     call SCF_GFs(V1)
+
+     
+     call SCF_GFs(V1,first)
+     
+     GF0%r=GFf%r ; GF0%a=GFf%a ; GF0%L=GFf%L ; GF0%G=GFf%G
+     if(first) first=.false.
+     
      write(30, *) V1, Current(V1)
      print *, 'Progress:', k/(Volt_range*0.01), '%', Current(V1)
   end do
