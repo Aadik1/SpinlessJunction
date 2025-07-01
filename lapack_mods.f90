@@ -235,14 +235,14 @@ subroutine Inverse_complex(N,A,INFO)
 !_______ determine the dimension of WORK
 
       call zgetri(N,A,N,IPIV,WORK,-1,INFO)
-      LWORK=WORK(1) 
+      LWORK=int(real(WORK(1) ))
       deallocate(WORK)
 
       allocate(WORK(LWORK))
       call zgetri(N,A,N,IPIV,WORK,LWORK,INFO)
       deallocate(WORK,IPIV)
       if(INFO.ne.0) then
-         write(9,*) 'ZGENRI: INFO = ',INFO ; stop
+         write(9,*) 'ZGETRI: INFO = ',INFO ; stop
       end if
 
 end subroutine Inverse_complex

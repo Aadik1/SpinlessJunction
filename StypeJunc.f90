@@ -80,7 +80,7 @@ program StypeJunction_Spinless
 !  allocate(SigmaL(Natoms, Natoms)) ; allocate(SigmaR(Natoms, Natoms))
   
 !...............calculate GR and GA for all voltages on the omega grid
-  allocate(work1(Natoms, Natoms)) ; allocate(work2(Natoms, Natoms)) ; allocate(work3(Natoms, Natoms))
+  allocate(work1(Natoms, Natoms)) ; allocate(work2(Natoms, Natoms)) ; allocate(work3(Natoms, Natoms)); allocate(work4(Natoms, Natoms))
   
 !.......................Calculates and plots Voltage vs Current curve  
 
@@ -90,7 +90,7 @@ program StypeJunction_Spinless
   !  print *, 'Pre-voltage'
   first=.true.
   do k = 0, Volt_range
-     V1 = 0.d0!V + k*0.05
+     V1 = V + k*0.05
 
      call SCF_GFs(V1,first)
      
@@ -99,7 +99,6 @@ program StypeJunction_Spinless
      
      write(30, *) V1, Current(V1)
      print *, 'Progress:', k/(Volt_range*0.01), '%', Current(V1)
-     STOP
   end do
   
   close(30) 
@@ -115,7 +114,7 @@ program StypeJunction_Spinless
   close(22)
   deallocate(GFf%L, GFf%G,GFf%R, GFf%A)
   deallocate(GF0%r, GF0%a, GF0%L, GF0%G) 
-  deallocate(work1, work2, work3)
+  deallocate(work1, work2, work3,work4)
   deallocate(H, Hub, omega)
   !deallocate(SigmaL, SigmaR)
   deallocate(GammaL, GammaR, G_nil)

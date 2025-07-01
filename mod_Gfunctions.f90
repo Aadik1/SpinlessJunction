@@ -13,7 +13,7 @@ module GreensFunctions
   complex*16, allocatable, dimension(:) :: G_nil
 !  complex*16, allocatable, dimension(:,:) ::  SigmaL, SigmaG, SigmaR
   complex*16, allocatable, dimension(:,:) ::  SigmaL, SigmaR
-  complex*16, allocatable, dimension(:,:) :: work1, work2, work3
+  complex*16, allocatable, dimension(:,:) :: work1, work2, work3, work4
   
   
   complex*16  :: prodr, proda, prodL, prodG
@@ -83,7 +83,7 @@ CONTAINS
        work1 = -H + 0.5d0*(im/hbar) * (GammaL + GammaR) !LK <========= must be +
        w = omega(j)
        do i = 1 , Natoms
-          work1(i,i) = work1(i,i) + hbar*(w+im*0.001d0)
+          work1(i,i) = work1(i,i) + hbar*(w+im*0.01d0)
         end do
        
        call Inverse_complex(Natoms, work1, info)
@@ -94,7 +94,7 @@ CONTAINS
     end do
 
     write(3,*) '-----------G0 Retarded - Advanced Subroutine------------'
-    write(3,*) GF0%r(1,1,1)-GF0%a(1,1,1), GF0%r(2,2,1)-GF0%a(2,2,1), GF0%r(3,3,1)-GF0%a(3,3,1)
+    write(3,*) GF0%r(1,1,1), GF0%r(2,2,2), GF0%r(3,3,1)
     write(3,*) '-----------------------------------------'
     
     
@@ -105,26 +105,24 @@ CONTAINS
     implicit none
     real*8 :: Volt, w
     integer :: j
-    complex*16, dimension(Natoms, Natoms) :: w1
     
-    work1 = (0.d0, 0.d0) ; work2 =(0.d0, 0.d0) ; work3 = (0.d0, 0.d0)
-!     work4 = (0.d0, 0.d0)
+    work1 = (0.d0, 0.d0) ; work2 =(0.d0, 0.d0) ; work3 = (0.d0, 0.d0); work4 = (0.d0, 0.d0)
     do j = 1 , N_of_w
        w = omega(j)
        work1 = GF0%r(:,:,j) 
        work2 = GF0%a(:,:,j)
 
        work3 = matmul(matmul(work1, im*(fermi_dist(w, Volt)*GammaL + fermi_dist(w, 0.d0)*GammaR)), work2) 
-!       work4 = matmul(matmul(work1, im*((fermi_dist(w, Volt)-1.d0)*GammaL + (fermi_dist(w, 0.d0)-1.d0)*GammaR)), work2)
+       work4 = matmul(matmul(work1, im*((fermi_dist(w, Volt)-1.d0)*GammaL + (fermi_dist(w, 0.d0)-1.d0)*GammaR)), work2)
        GF0%L(:,:,j) = work3
-!       GF0%G(:,:,j) = work4
+       GF0%G(:,:,j) = work4
     end do
 
     write(3,*) '---------G0 Lesser Subroutine------------'
     write(3,*) GF0%L(1,1,1), GF0%L(2,2,1), GF0%L(3,3,1)
     write(3,*) '-------------------------------------'
      
-    GF0%G =  GF0%L + GF0%R - GF0%A
+!    GF0%G =  GF0%L + GF0%R - GF0%A
   end subroutine G0_L_G
   
 !=====================================================
@@ -138,12 +136,15 @@ CONTAINS
    integer :: i, j, iw
    real*8 :: Volt, w 
    complex*16 :: Omr, SigG, SigL
-   complex*16, dimension(Natoms,Natoms) ::  SigmaL, Sigma1, SigmaR, w1, w2, w3, w4
+   complex*16, dimension(Natoms,Natoms) ::  SigmaL, Sigma1, SigmaR, w1,w2,w3,SigmaG
    
 !............full SigmaR due to interactions Eq. (7)
    SigmaR = (0.d0, 0.d0); SigmaL = (0.d0, 0.d0)
 
-   if (order .eq. 1) then
+   if (order .eq. 0) then
+      SigmaR = (0.d0, 0.d0); SigmaL = (0.d0, 0.d0)
+      
+   else if (order .eq. 1) then
       do i = 1, Natoms
          SigmaR(i,i) = SigmaR(i,i) - im*hbar*Hub(i)*G_nil(i) ! LK <== must be minus!
       end do
@@ -163,8 +164,8 @@ CONTAINS
 !.....Interaction contribution of both Sigmas     
       do i = 1, Natoms
          do j = 1, Natoms
-            call Omega_int_SigL_SigG(i,j, iw, SigL, SigG)  
-!            SigmaG(i,j) = SigmaG(i,j) + Hub(i)*Hub(j)*SigG*hbar**2 
+            call Omega_int_SigL_SigG(j,i, iw, SigL, SigG)  
+            SigmaG(i,j) = SigmaG(i,j) + Hub(i)*Hub(j)*SigG*hbar**2 
             SigmaL(i,j) = SigmaL(i,j) + Hub(i)*Hub(j)*SigL*hbar**2
          end do
       end do
@@ -176,10 +177,10 @@ CONTAINS
          write(3,*) i, (SigmaR(i,j),j=1,Natoms)
       end do
       write(3,*) iw,' SigmaL'
-    !  do i=1,Natoms
-    !     write(3,*) i, (SigmaL(i,j),j=1,Natoms)
-    !  end do
-    !  write(3,*) iw,' SigmaG'
+      do i=1,Natoms
+         write(3,*) i, (SigmaL(i,j),j=1,Natoms)
+      end do
+      write(3,*) iw,' SigmaG'
    end if
 !..real variable interactions turns off the Interaction component of the sigmas 
 !............full Gr and Ga, Eq. (5) and (6)
@@ -187,7 +188,7 @@ CONTAINS
   w = omega(iw)
   w1 = -H + 0.5d0*(im/hbar)*(GammaL + GammaR) - SigmaR ! LK <== must be + for emb and minus for interaction sigma
   do i = 1 , Natoms
-     w1(i,i) = w1(i,i) + hbar*(w +im*0.001d0)
+     w1(i,i) = w1(i,i) + hbar*(w +im*0.01d0)
   end do
   
   call Inverse_complex(Natoms, w1, info)
@@ -198,13 +199,13 @@ CONTAINS
 !.....Embedding contribution of both Sigmas
 
   SigmaL = SigmaL + im*(fermi_dist(w, Volt)*GammaL + fermi_dist(w, 0.d0)*GammaR)/hbar    
-!  SigmaG = SigmaG + im*((fermi_dist(w, Volt)-1.d0)*GammaL + (fermi_dist(w, 0.d0)-1.d0)*GammaR)/hbar
-  
+  SigmaG = SigmaG + im*((fermi_dist(w, Volt)-1.d0)*GammaL + (fermi_dist(w, 0.d0)-1.d0)*GammaR)/hbar
+
 !.............full GL and GG, Eq. (16) and (17)
 
-  GFf%L(:,:,iw) = matmul(matmul(w1, SigmaL), w2) !.. GL = Keldysh 1st term + Gr * SigmaL * Ga
-!  GFf%G(:,:,iw) = matmul(matmul(work1, SigmaG), work2) !.. GG = Gr * SigmaG * Ga
-  GFf%G = GFf%L + GFf%R - GFf%A
+  GFf%L(:,:,iw) = matmul(matmul(w1, SigmaL), w2) !.. GL = Gr * SigmaL * Ga
+  GFf%G(:,:,iw) = matmul(matmul(w1, SigmaG), w2) !.. GG = Gr * SigmaG * Ga
+!  GFf%G = GFf%L + GFf%R - GFf%A
   
 end subroutine G_full
 
@@ -234,9 +235,6 @@ end subroutine G_full
 
     pp = delta/(2.d0*pi) !LK <== error in brackets
     Omega_R = Omr*pp*pp
-  !  write(3,*) '-----------Omega_R------------'
-  !  write(3,*) Omega_R
-  !  write(3,*) '------------------------------'
   end function Omega_R
   
   subroutine Omega_int_SigL_SigG(i,j, iw, SigL, SigG) !... interaction contributions of Eq. (3) and (4) in CHE
@@ -253,16 +251,12 @@ end subroutine G_full
           k3=iw-k1+k2
           if(k3 .ge. 1 .and. k3 .le. N_of_w) then
              SigL = SigL + GF0%L(i,j,k1)*GF0%G(j,i,k2)*GF0%L(i,j,k3) 
-!             SigG = SigG + GF0%G(i,j,k1)*GF0%L(j,i,k2)*GF0%G(i,j,k3) 
+             SigG = SigG + GF0%G(i,j,k1)*GF0%L(j,i,k2)*GF0%G(i,j,k3) 
           end if
        end do
     end do
     
-    SigL = SigL*pp*pp 
-    !    SigG = SigG*pp*pp
-  !  write(3,*) '-----------SigL------------'
-  !  write(3,*) SigL
-  !  write(3,*) '---------------------------'
+    SigL = SigL*pp*pp ; SigG = SigG*pp*pp
   end subroutine Omega_int_SigL_SigG
 
 !====================================================
@@ -373,17 +367,17 @@ subroutine SCF_GFs(Volt,first)
      GF0%R = pullay*GFf%R + (1.0d0-pullay)*GF0%R
      GF0%A = pullay*GFf%A + (1.0d0-pullay)*GF0%A
      GF0%L = pullay*GFf%L + (1.0d0-pullay)*GF0%L
-     GF0%G = GF0%L + GF0%R - GF0%A
+     GF0%G = pullay*GFf%G + (1.0d0-pullay)*GF0%G !GF0%L + GF0%R - GF0%A
      !$OMP END CRITICAL
      
      
-     write(3,*) '-----------G0 Retarded Mixing------------'
-     write(3,*) GF0%r(1,1,1)-GF0%a(1,1,1), GF0%r(2,2,1)-GF0%a(2,2,1), GF0%r(3,3,1)-GF0%a(3,3,1)
-     write(3,*) '-----------------------------------------'
+!     write(3,*) '-----------G0 Retarded Mixing------------'
+!     write(3,*) GF0%r(1,1,1)-GF0%a(1,1,1), GF0%r(2,2,1)-GF0%a(2,2,1), GF0%r(3,3,1)-GF0%a(3,3,1)
+!     write(3,*) '-----------------------------------------'
      
-     write(3,*) '---------G0 Lesser Mixing------------'
-     write(3,*) GF0%L(1,1,1), GF0%L(2,2,1), GF0%L(3,3,1)
-     write(3,*) '-------------------------------------'
+!     write(3,*) '---------G0 Lesser Mixing------------'
+!     write(3,*) GF0%G(1,1,1)-GF0%L(1,1,1), GF0%G(2,2,1)-GF0%L(2,2,1), GF0%G(3,3,1)-GF0%L(3,3,1)
+!     write(3,*) '-------------------------------------'
      
      
 !LK printing the spectral function
@@ -393,7 +387,7 @@ subroutine SCF_GFs(Volt,first)
         write(*,*)'... REACHED REQUIRED ACCURACY ...'
         exit
      end if
-     !STOP
+  !   STOP
   END DO
   close(17)
 end subroutine SCF_GFs

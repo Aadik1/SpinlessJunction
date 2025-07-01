@@ -94,25 +94,20 @@ real*8 function trans(iw, Volt) !....square bracket terms of Eq. (2) in CHE
   use GreensFunctions
   implicit none
   integer :: iw,i,j
-  real*8 :: Volt, trace1, w
+  real*8 :: Volt, w
+  complex*16 :: trace1
 
   w = omega(iw)
   work3 = (0.d0, 0.d0)
 
   work1 = GFf%L(:,:,iw)
   work2 = GFf%G(:,:,iw)
-  
-  work3 = matmul(im*GammaL, (fermi_dist(w, Volt)-1.d0)*work1 - fermi_dist(w, Volt)*work2)
 
-!  write(3,*) '-----------trans------------', 'omega:', omega(iw)
-!  do i=1,Natoms
-!     ! write(3,*)  ((fermi_dist(w, Volt)-1.d0)*work1(i,j)-fermi_dist(w, Volt)*work2(i,j),j=1,Natoms)
- !    write(3,*) (work3(i,j), j=1,Natoms)
- ! end do
- ! write(3,*) '------------------------------'
+  work3 = im*matmul(GammaL, (fermi_dist(w, Volt)-1.d0)*work1 - fermi_dist(w, Volt)*work2)
   
   call trace_of_A(work3, Natoms, trace1)
-  trans = trace1/(2.d0*pi)
+  trans = real(trace1)/(2.d0*pi)
+
 end function trans
 
 real*8 function Current(Volt)
