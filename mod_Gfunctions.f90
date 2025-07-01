@@ -37,10 +37,12 @@ CONTAINS
   real*8 function fermi_dist(w, V)
     implicit none
     real*8 ::  arg, w, V
+
     arg = (w - mu + V/hbar)*beta
     fermi_dist =  1.d0/(exp(hbar*arg) +1.d0)
+    
   end function fermi_dist
-
+  
   
 !=====================================================
 !======== Non-interacting GFs ========================
@@ -81,7 +83,7 @@ CONTAINS
        work1 = -H + 0.5d0*(im/hbar) * (GammaL + GammaR) !LK <========= must be +
        w = omega(j)
        do i = 1 , Natoms
-          work1(i,i) = work1(i,i) + hbar*(w +im*0.01d0)
+          work1(i,i) = work1(i,i) + hbar*(w+im*0.001d0)
         end do
        
        call Inverse_complex(Natoms, work1, info)
@@ -91,8 +93,8 @@ CONTAINS
        GF0%a(:,:,j) = work2
     end do
 
-    write(3,*) '-----------G0 Retarded Subroutine------------'
-    write(3,*) GF0%r(1,1,1), GF0%r(2,2,1), GF0%r(3,3,1)
+    write(3,*) '-----------G0 Retarded - Advanced Subroutine------------'
+    write(3,*) GF0%r(1,1,1)-GF0%a(1,1,1), GF0%r(2,2,1)-GF0%a(2,2,1), GF0%r(3,3,1)-GF0%a(3,3,1)
     write(3,*) '-----------------------------------------'
     
     
@@ -103,19 +105,21 @@ CONTAINS
     implicit none
     real*8 :: Volt, w
     integer :: j
+    complex*16, dimension(Natoms, Natoms) :: w1
     
     work1 = (0.d0, 0.d0) ; work2 =(0.d0, 0.d0) ; work3 = (0.d0, 0.d0)
 !     work4 = (0.d0, 0.d0)
     do j = 1 , N_of_w
        w = omega(j)
        work1 = GF0%r(:,:,j) 
-       work2 = GF0%a(:,:,j) 
+       work2 = GF0%a(:,:,j)
+
        work3 = matmul(matmul(work1, im*(fermi_dist(w, Volt)*GammaL + fermi_dist(w, 0.d0)*GammaR)), work2) 
 !       work4 = matmul(matmul(work1, im*((fermi_dist(w, Volt)-1.d0)*GammaL + (fermi_dist(w, 0.d0)-1.d0)*GammaR)), work2)
        GF0%L(:,:,j) = work3
 !       GF0%G(:,:,j) = work4
     end do
-    
+
     write(3,*) '---------G0 Lesser Subroutine------------'
     write(3,*) GF0%L(1,1,1), GF0%L(2,2,1), GF0%L(3,3,1)
     write(3,*) '-------------------------------------'
@@ -134,7 +138,7 @@ CONTAINS
    integer :: i, j, iw
    real*8 :: Volt, w 
    complex*16 :: Omr, SigG, SigL
-   complex*16, dimension(Natoms,Natoms) ::  SigmaL, Sigma1, SigmaR, w1, w2
+   complex*16, dimension(Natoms,Natoms) ::  SigmaL, Sigma1, SigmaR, w1, w2, w3, w4
    
 !............full SigmaR due to interactions Eq. (7)
    SigmaR = (0.d0, 0.d0); SigmaL = (0.d0, 0.d0)
@@ -166,29 +170,16 @@ CONTAINS
       end do
    end if
 
-   
-   write(3,*) '-----------SigmaR------------'
-       do i=1,Natoms
-         write(3,*) i, (SigmaR(i,j),j=1,Natoms)
-      end do
-   write(3,*) '------------------------------'
-   
-   write(3,*) '-----------SigmaL------------'
-   do i=1,Natoms
-      write(3,*) i, (Sigmal(i,j),j=1,Natoms)
-   end do
-   write(3,*) '------------------------------'
-   
    if(verb) then
       write(3,*) iw,' SigmaR'
       do i=1,Natoms
          write(3,*) i, (SigmaR(i,j),j=1,Natoms)
       end do
       write(3,*) iw,' SigmaL'
-      do i=1,Natoms
-         write(3,*) i, (SigmaL(i,j),j=1,Natoms)
-      end do
-      write(3,*) iw,' SigmaG'
+    !  do i=1,Natoms
+    !     write(3,*) i, (SigmaL(i,j),j=1,Natoms)
+    !  end do
+    !  write(3,*) iw,' SigmaG'
    end if
 !..real variable interactions turns off the Interaction component of the sigmas 
 !............full Gr and Ga, Eq. (5) and (6)
@@ -196,7 +187,7 @@ CONTAINS
   w = omega(iw)
   w1 = -H + 0.5d0*(im/hbar)*(GammaL + GammaR) - SigmaR ! LK <== must be + for emb and minus for interaction sigma
   do i = 1 , Natoms
-     w1(i,i) = w1(i,i) + hbar*(w +im*0.01d0)
+     w1(i,i) = w1(i,i) + hbar*(w +im*0.001d0)
   end do
   
   call Inverse_complex(Natoms, w1, info)
@@ -211,7 +202,7 @@ CONTAINS
   
 !.............full GL and GG, Eq. (16) and (17)
 
-  GFf%L(:,:,iw) = matmul(matmul(w1, SigmaL), w2) !.. GL = Keldysh 1st term + Gr * SigmaL * Ga 
+  GFf%L(:,:,iw) = matmul(matmul(w1, SigmaL), w2) !.. GL = Keldysh 1st term + Gr * SigmaL * Ga
 !  GFf%G(:,:,iw) = matmul(matmul(work1, SigmaG), work2) !.. GG = Gr * SigmaG * Ga
   GFf%G = GFf%L + GFf%R - GFf%A
   
@@ -280,7 +271,7 @@ end subroutine G_full
 
 !.............need G0f%L to calculate GL_of_0
 !.............Calculates GFs at every omega and Voltage simultaneously 
-subroutine SCF_GFs(Volt, first)
+subroutine SCF_GFs(Volt,first)
   implicit none
   integer :: iw, iteration,i, Vname
   real*8 :: Volt, err, diff, st, et
@@ -387,7 +378,7 @@ subroutine SCF_GFs(Volt, first)
      
      
      write(3,*) '-----------G0 Retarded Mixing------------'
-     write(3,*) GF0%r(1,1,1), GF0%r(2,2,1), GF0%r(3,3,1)
+     write(3,*) GF0%r(1,1,1)-GF0%a(1,1,1), GF0%r(2,2,1)-GF0%a(2,2,1), GF0%r(3,3,1)-GF0%a(3,3,1)
      write(3,*) '-----------------------------------------'
      
      write(3,*) '---------G0 Lesser Mixing------------'

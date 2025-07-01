@@ -90,9 +90,8 @@ program StypeJunction_Spinless
   !  print *, 'Pre-voltage'
   first=.true.
   do k = 0, Volt_range
-     V1 = V + k*0.05
+     V1 = 0.d0!V + k*0.05
 
-     
      call SCF_GFs(V1,first)
      
      GF0%r=GFf%r ; GF0%a=GFf%a ; GF0%L=GFf%L ; GF0%G=GFf%G
@@ -100,6 +99,7 @@ program StypeJunction_Spinless
      
      write(30, *) V1, Current(V1)
      print *, 'Progress:', k/(Volt_range*0.01), '%', Current(V1)
+     STOP
   end do
   
   close(30) 
