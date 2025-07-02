@@ -334,14 +334,6 @@ subroutine SCF_GFs(Volt,first)
      end do
      !$OMP END PARALLEL DO
      
-     write(3,*) '-----------GF Retarded PreSCF------------'
-     write(3,*) GFf%r(1,1,1), GFf%r(2,2,1), GFf%r(3,3,1)
-     write(3,*) '-----------------------------------------'
-     
-     write(3,*) '-----------GF Lesser PreSCF--------------'
-     write(3,*) GFf%L(1,1,1), GFf%L(2,2,1), GFf%L(3,3,1)
-     write(3,*) '-----------------------------------------'
-     
      et = OMP_GET_WTIME()
      write(22,'(A,F10.8,A,A,A,I4)') 'G_full w-loop runtime:', (et-st), 'seconds', '   ', 'Iteration:', iteration
      
@@ -371,16 +363,6 @@ subroutine SCF_GFs(Volt,first)
      GF0%L = pullay*GFf%L + (1.0d0-pullay)*GF0%L
      GF0%G = pullay*GFf%G + (1.0d0-pullay)*GF0%G !GF0%L + GF0%R - GF0%A
      !$OMP END CRITICAL
-     
-     
-     write(3,*) '-----------G0 Retarded Mixing------------'
-     write(3,*) GF0%r(1,1,1), GF0%r(2,2,1), GF0%r(3,3,1)
-     write(3,*) '-----------------------------------------'
-
-     write(3,*) '---------G0 Lesser Mixing------------'
-     write(3,*) GF0%L(1,1,1), GF0%L(2,2,1), GF0%L(3,3,1)
-     write(3,*) '-------------------------------------'
-     
      
 !LK printing the spectral function
 
