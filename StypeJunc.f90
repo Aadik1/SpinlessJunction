@@ -79,7 +79,8 @@ program StypeJunction_Spinless
 !  allocate(SigmaL(Natoms, Natoms)) ; allocate(SigmaR(Natoms, Natoms))
   
 !...............calculate GR and GA for all voltages on the omega grid
-  allocate(work1(Natoms, Natoms)) ; allocate(work2(Natoms, Natoms)) ; allocate(work3(Natoms, Natoms)); allocate(work4(Natoms, Natoms))
+  allocate(work1(Natoms, Natoms)) ; allocate(work2(Natoms, Natoms)) ; allocate(work3(Natoms, Natoms))
+  allocate(work4(Natoms, Natoms))
   
 !.......................Calculates and plots Voltage vs Current curve  
 
