@@ -66,10 +66,6 @@ CONTAINS
        end do
        G_nil(i)=s*pp
     end do
-
-    write(3,*) '----------------G_nil-------------------'
-    write(3,*) G_nil(1), G_nil(2), G_nil(3)
-    write(3,*) '----------------G_nil-------------------'
   end subroutine GL_of_0
   
   
@@ -91,12 +87,7 @@ CONTAINS
        
        GF0%r(:,:,j) = work1
        GF0%a(:,:,j) = work2
-    end do
-
-    write(3,*) '-----------G0 Retarded - Advanced Subroutine------------'
-    write(3,*) GF0%r(1,1,1), GF0%r(2,2,2), GF0%r(3,3,1)
-    write(3,*) '-----------------------------------------'
-    
+    end do  
     
   end subroutine G0_R_A
   
@@ -104,7 +95,7 @@ CONTAINS
 !............non-interacting Greens functions: G> and G< for all omega on the grid, Eq. (16) and (17) in CHE
     implicit none
     real*8 :: Volt, w
-    integer :: j
+    integer :: j, i
     
     work1 = (0.d0, 0.d0) ; work2 =(0.d0, 0.d0) ; work3 = (0.d0, 0.d0); work4 = (0.d0, 0.d0)
     do j = 1 , N_of_w
@@ -117,12 +108,8 @@ CONTAINS
        GF0%L(:,:,j) = work3
        GF0%G(:,:,j) = work4
     end do
-
-    write(3,*) '---------G0 Lesser Subroutine------------'
-    write(3,*) GF0%L(1,1,1), GF0%L(2,2,1), GF0%L(3,3,1)
-    write(3,*) '-------------------------------------'
-     
-!    GF0%G =  GF0%L + GF0%R - GF0%A
+    
+    !    GF0%G =  GF0%L + GF0%R - GF0%A
   end subroutine G0_L_G
   
 !=====================================================
@@ -136,7 +123,7 @@ CONTAINS
    integer :: i, j, iw
    real*8 :: Volt, w 
    complex*16 :: Omr, SigG, SigL
-   complex*16, dimension(Natoms,Natoms) ::  SigmaL, Sigma1, SigmaR, w1,w2,w3,SigmaG
+   complex*16, dimension(Natoms,Natoms) ::  SigmaL, Sigma1, SigmaR, w1,w2 ,SigmaG
    
 !............full SigmaR due to interactions Eq. (7)
    SigmaR = (0.d0, 0.d0); SigmaL = (0.d0, 0.d0)
@@ -155,7 +142,7 @@ CONTAINS
             if (i .ne. j) then
                SigmaR(i,j) = SigmaR(i,j) + (Hub(j)*Hub(i)*OmR)*hbar**2
             else
-               SigmaR(i,j) = SigmaR(i,j) - im*hbar*Hub(i)*G_nil(i) + (Hub(j)*Hub(i)*OmR)*hbar**2 
+               SigmaR(i,j) = SigmaR(i,j)  - im*hbar*Hub(i)*G_nil(i) + (Hub(j)*Hub(i)*OmR)*hbar**2 
             end if
          end do
       end do
@@ -201,13 +188,27 @@ CONTAINS
   SigmaL = SigmaL + im*(fermi_dist(w, Volt)*GammaL + fermi_dist(w, 0.d0)*GammaR)/hbar    
   SigmaG = SigmaG + im*((fermi_dist(w, Volt)-1.d0)*GammaL + (fermi_dist(w, 0.d0)-1.d0)*GammaR)/hbar
 
-!.............full GL and GG, Eq. (16) and (17)
+  !.............full GL and GG, Eq. (16) and (17)
 
+  write(3,*) '----------------------------------------'
+  write(3,*) 'SigmaR:'
+  do i = 1, Natoms
+     write(3,*) (SigmaR(i,j), j= 1, Natoms)
+  end do
+  write(3,*) '-----------------------------------------'
+  
   GFf%L(:,:,iw) = matmul(matmul(w1, SigmaL), w2) !.. GL = Gr * SigmaL * Ga
   GFf%G(:,:,iw) = matmul(matmul(w1, SigmaG), w2) !.. GG = Gr * SigmaG * Ga
 !  GFf%G = GFf%L + GFf%R - GFf%A
-  
+
+  write(3,*) '-----------GF Retarded ------------'
+  do i = 1, Natoms
+     write(3,*) (GFf%r(i,j,1), j= 1, Natoms)
+  end do
+  write(3,*) '-----------------------------------------'
+
 end subroutine G_full
+
 
 !=====================================================
 !========Calcualtions needed for full GFs=============
@@ -287,7 +288,8 @@ subroutine SCF_GFs(Volt,first)
   call G0_L_G(Volt)
   call CPU_TIME(et)
   write(22,'(A,F10.8,A,A,A,I4)') 'G0_L_G runtime:', (et-st), 'seconds', '   ', 'Iteration:', iteration
- 
+
+  
   print *, '>>>>>>>>>>VOLTAGE:', Volt
 
   if(verb) then
@@ -371,13 +373,13 @@ subroutine SCF_GFs(Volt,first)
      !$OMP END CRITICAL
      
      
-!     write(3,*) '-----------G0 Retarded Mixing------------'
-!     write(3,*) GF0%r(1,1,1)-GF0%a(1,1,1), GF0%r(2,2,1)-GF0%a(2,2,1), GF0%r(3,3,1)-GF0%a(3,3,1)
-!     write(3,*) '-----------------------------------------'
-     
-!     write(3,*) '---------G0 Lesser Mixing------------'
-!     write(3,*) GF0%G(1,1,1)-GF0%L(1,1,1), GF0%G(2,2,1)-GF0%L(2,2,1), GF0%G(3,3,1)-GF0%L(3,3,1)
-!     write(3,*) '-------------------------------------'
+     write(3,*) '-----------G0 Retarded Mixing------------'
+     write(3,*) GF0%r(1,1,1), GF0%r(2,2,1), GF0%r(3,3,1)
+     write(3,*) '-----------------------------------------'
+
+     write(3,*) '---------G0 Lesser Mixing------------'
+     write(3,*) GF0%L(1,1,1), GF0%L(2,2,1), GF0%L(3,3,1)
+     write(3,*) '-------------------------------------'
      
      
 !LK printing the spectral function
@@ -387,7 +389,6 @@ subroutine SCF_GFs(Volt,first)
         write(*,*)'... REACHED REQUIRED ACCURACY ...'
         exit
      end if
-  !   STOP
   END DO
   close(17)
 end subroutine SCF_GFs

@@ -54,7 +54,6 @@ program StypeJunction_Spinless
   N_of_w = (w_fin - w_init)/delta
   write(*,*) 'N_of_w:', N_of_w, 'w_fin:', w_fin, 'w_init:', w_init
   allocate(omega(N_of_w))
-
   do i = 1, N_of_w 
      omega(i) = w_init + i*delta
   end do
