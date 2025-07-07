@@ -42,223 +42,6 @@ CONTAINS
     fermi_dist =  1.d0/(exp(hbar*arg) +1.d0)
     
   end function fermi_dist
-  
-  
-!=====================================================
-!======== Non-interacting GFs ========================
-!=====================================================  
-
-  
-  !......Calculates lesser Greens function at time = 0
-  subroutine GL_of_0()        !LK <======= a slight change
-    !.....Lesser Greens function at time = 0
-    !.....ei - eigenvalues of the Hamiltonian 
-    implicit none
-    integer :: i, k1
-    real*8 :: pp
-    complex*16 :: s
-    
-    pp=delta/(2.d0*pi)
-    do i = 1, Natoms 
-       s =(0.d0, 0.d0)
-       do k1 = 1, N_of_w
-          s = s + GF0%L(i,i,k1)
-       end do
-       G_nil(i)=s*pp
-    end do
-  end subroutine GL_of_0
-  
-  
-  subroutine G0_R_A()
-    !............non-interacting Greens functions: GR and Ga,  Eq. (5) and Eq. (6) in 'Current_Hubbard_Equations' document (CHE)
-    implicit none
-    integer :: j, i
-    real*8 :: w
-   
-    do j = 1, N_of_w
-       work1 = -H + 0.5d0*(im/hbar) * (GammaL + GammaR) !LK <========= must be +
-       w = omega(j)
-       do i = 1 , Natoms
-          work1(i,i) = work1(i,i) + hbar*(w+im*0.01d0)
-        end do
-       
-       call Inverse_complex(Natoms, work1, info)
-       call Hermitian_Conjg(work1, Natoms, work2)
-       
-       GF0%r(:,:,j) = work1
-       GF0%a(:,:,j) = work2
-    end do  
-    
-  end subroutine G0_R_A
-  
-  subroutine G0_L_G(Volt)
-!............non-interacting Greens functions: G> and G< for all omega on the grid, Eq. (16) and (17) in CHE
-    implicit none
-    real*8 :: Volt, w
-    integer :: j, i
-    
-    work1 = (0.d0, 0.d0) ; work2 =(0.d0, 0.d0) ; work3 = (0.d0, 0.d0); work4 = (0.d0, 0.d0)
-    do j = 1 , N_of_w
-       w = omega(j)
-       work1 = GF0%r(:,:,j) 
-       work2 = GF0%a(:,:,j)
-
-       work3 = matmul(matmul(work1, im*(fermi_dist(w, Volt)*GammaL + fermi_dist(w, 0.d0)*GammaR)), work2) 
-       work4 = matmul(matmul(work1, im*((fermi_dist(w, Volt)-1.d0)*GammaL + (fermi_dist(w, 0.d0)-1.d0)*GammaR)), work2)
-       GF0%L(:,:,j) = work3
-       GF0%G(:,:,j) = work4
-    end do
-    
-    !    GF0%G =  GF0%L + GF0%R - GF0%A
-  end subroutine G0_L_G
-  
-!=====================================================
-!================== Full GFs =========================
-!===================================================== 
-
-  subroutine G_full(iw, Volt)
-!... Full Greens function, leaves Retarded and Advanced in the work arrays, application
-!    of Eq. (16) and (17), but with the full Sigmas, Eq. (3), (7) and (8) in CHE
-   implicit none
-   integer :: i, j, iw
-   real*8 :: Volt, w 
-   complex*16 :: Omr, SigG, SigL
-   complex*16, dimension(Natoms,Natoms) ::  SigmaL, Sigma1, SigmaR, w1,w2 ,SigmaG
-   
-!............full SigmaR due to interactions Eq. (7)
-   SigmaR = (0.d0, 0.d0); SigmaL = (0.d0, 0.d0)
-
-   if (order .eq. 0) then
-      SigmaR = (0.d0, 0.d0); SigmaL = (0.d0, 0.d0)
-      
-   else if (order .eq. 1) then
-      do i = 1, Natoms
-         SigmaR(i,i) = SigmaR(i,i) - im*hbar*Hub(i)*G_nil(i) ! LK <== must be minus!
-      end do
-   else if (order .eq. 2) then 
-      do i = 1, Natoms
-         do j = 1, Natoms
-            Omr = Omega_R(i,j,iw)
-            if (i .ne. j) then
-               SigmaR(i,j) = SigmaR(i,j) + (Hub(j)*Hub(i)*OmR)*hbar**2
-            else
-               SigmaR(i,j) = SigmaR(i,j)  - im*hbar*Hub(i)*G_nil(i) + (Hub(j)*Hub(i)*OmR)*hbar**2 
-            end if
-         end do
-      end do
-
-!..............full SigmaL and SigmaG, Eq. (3) and (4)     
-!.....Interaction contribution of both Sigmas     
-      do i = 1, Natoms
-         do j = 1, Natoms
-            call Omega_int_SigL_SigG(j,i, iw, SigL, SigG)  
-            SigmaG(i,j) = SigmaG(i,j) + Hub(i)*Hub(j)*SigG*hbar**2 
-            SigmaL(i,j) = SigmaL(i,j) + Hub(i)*Hub(j)*SigL*hbar**2
-         end do
-      end do
-   end if
-
-   if(verb) then
-      write(3,*) iw,' SigmaR'
-      do i=1,Natoms
-         write(3,*) i, (SigmaR(i,j),j=1,Natoms)
-      end do
-      write(3,*) iw,' SigmaL'
-      do i=1,Natoms
-         write(3,*) i, (SigmaL(i,j),j=1,Natoms)
-      end do
-      write(3,*) iw,' SigmaG'
-   end if
-!..real variable interactions turns off the Interaction component of the sigmas 
-!............full Gr and Ga, Eq. (5) and (6)
-   
-  w = omega(iw)
-  w1 = -H + 0.5d0*(im/hbar)*(GammaL + GammaR) - SigmaR ! LK <== must be + for emb and minus for interaction sigma
-  do i = 1 , Natoms
-     w1(i,i) = w1(i,i) + hbar*(w +im*0.01d0)
-  end do
-  
-  call Inverse_complex(Natoms, w1, info)
-  call Hermitian_Conjg(w1, Natoms, w2)
-  
-  GFf%R(:,:,iw) = w1; GFf%A(:,:,iw) = w2
-
-!.....Embedding contribution of both Sigmas
-
-  SigmaL = SigmaL + im*(fermi_dist(w, Volt)*GammaL + fermi_dist(w, 0.d0)*GammaR)/hbar    
-  SigmaG = SigmaG + im*((fermi_dist(w, Volt)-1.d0)*GammaL + (fermi_dist(w, 0.d0)-1.d0)*GammaR)/hbar
-
-  !.............full GL and GG, Eq. (16) and (17)
-
-  write(3,*) '----------------------------------------'
-  write(3,*) 'SigmaR:'
-  do i = 1, Natoms
-     write(3,*) (SigmaR(i,j), j= 1, Natoms)
-  end do
-  write(3,*) '-----------------------------------------'
-  
-  GFf%L(:,:,iw) = matmul(matmul(w1, SigmaL), w2) !.. GL = Gr * SigmaL * Ga
-  GFf%G(:,:,iw) = matmul(matmul(w1, SigmaG), w2) !.. GG = Gr * SigmaG * Ga
-!  GFf%G = GFf%L + GFf%R - GFf%A
-
-  write(3,*) '-----------GF Retarded ------------'
-  do i = 1, Natoms
-     write(3,*) (GFf%r(i,j,1), j= 1, Natoms)
-  end do
-  write(3,*) '-----------------------------------------'
-
-end subroutine G_full
-
-
-!=====================================================
-!========Calcualtions needed for full GFs=============
-!===================================================== 
-  
-!......................Calculation of Omega terms for the self-energies, Eq. (9) in CHE
-  complex*16 function Omega_R(i, j, iw)
-    implicit none
-    integer :: i, j, iw, k_1, k_2, k_3
-    complex*16 :: Omr
-    real*8 :: pp
-    
-    Omr = (0.d0, 0.d0)
-    do k_1 = 1, N_of_w
-       do k_2 = 1, N_of_w
-          
-          k_3 = iw- k_1 +k_2
-          if (k_3 .ge. 1 .and. k_3 .le. N_of_w) then
-             Omr = Omr + GF0%r(i,j,k_1)*GF0%L(j,i,k_2)*GF0%L(i,j,k_3)  + GF0%L(i,j,k_1)*GF0%a(j,i,k_2)*GF0%L(i,j,k_3) &
-                  + GF0%L(i,j,k_1)*GF0%G(j,i,k_2)*GF0%a(i,j,k_3)
-          end if
-
-       end do
-    end do
-
-    pp = delta/(2.d0*pi) !LK <== error in brackets
-    Omega_R = Omr*pp*pp
-  end function Omega_R
-  
-  subroutine Omega_int_SigL_SigG(i,j, iw, SigL, SigG) !... interaction contributions of Eq. (3) and (4) in CHE
-    implicit none
-    integer :: i, j, k1, k2, k3, iw
-    complex*16 :: SigL, SigG
-    real*8 :: pp
-
-    
-    pp = delta/(2.d0*pi) 
-    SigL=(0.0d0, 0.0d0); SigG = (0.d0, 0.d0) 
-    do k1=1,N_of_w
-       do k2=1,N_of_w        
-          k3=iw-k1+k2
-          if(k3 .ge. 1 .and. k3 .le. N_of_w) then
-             SigL = SigL + GF0%L(i,j,k1)*GF0%G(j,i,k2)*GF0%L(i,j,k3) 
-             SigG = SigG + GF0%G(i,j,k1)*GF0%L(j,i,k2)*GF0%G(i,j,k3) 
-          end if
-       end do
-    end do
-    
-    SigL = SigL*pp*pp ; SigG = SigG*pp*pp
-  end subroutine Omega_int_SigL_SigG
 
 !====================================================
 !========== Self consistency field calculations =====
@@ -276,20 +59,22 @@ subroutine SCF_GFs(Volt,first)
   iteration = 0
 
   write(22,*) '........SCF Calculations at Voltage:', Volt, '..........'
-  
-  st =0.d0; et= 0.d0
-  call CPU_TIME(st)
-  call G0_R_A()
-  call CPU_TIME(et)
-  write(22,'(A,F10.8,A,A,A,I4)') 'G0_R_A runtime:', (et-st), 'seconds', '   ', 'Iteration:', iteration
-  
-  st =0.d0; et= 0.d0
-  call CPU_TIME(st)
-  call G0_L_G(Volt)
-  call CPU_TIME(et)
-  write(22,'(A,F10.8,A,A,A,I4)') 'G0_L_G runtime:', (et-st), 'seconds', '   ', 'Iteration:', iteration
 
-  
+  if (first) then 
+     st =0.d0; et= 0.d0
+     call CPU_TIME(st)
+     call G0_R_A()
+     call CPU_TIME(et)
+     write(22,'(A,F10.8,A,A,A,I4)') 'G0_R_A runtime:', (et-st), 'seconds', '   ', 'Iteration:', iteration
+     
+     st =0.d0; et= 0.d0
+     call CPU_TIME(st)
+     call G0_L_G(Volt)
+     call CPU_TIME(et)
+     write(22,'(A,F10.8,A,A,A,I4)') 'G0_L_G runtime:', (et-st), 'seconds', '   ', 'Iteration:', iteration
+     
+  end if
+
   print *, '>>>>>>>>>>VOLTAGE:', Volt
 
   if(verb) then
@@ -361,7 +146,8 @@ subroutine SCF_GFs(Volt,first)
      GF0%R = pullay*GFf%R + (1.0d0-pullay)*GF0%R
      GF0%A = pullay*GFf%A + (1.0d0-pullay)*GF0%A
      GF0%L = pullay*GFf%L + (1.0d0-pullay)*GF0%L
-     GF0%G = pullay*GFf%G + (1.0d0-pullay)*GF0%G !GF0%L + GF0%R - GF0%A
+     !GF0%G = pullay*GFf%G + (1.0d0-pullay)*GF0%G
+     GF0%G=GF0%L + GF0%R - GF0%A
      !$OMP END CRITICAL
      
 !LK printing the spectral function
@@ -375,8 +161,229 @@ subroutine SCF_GFs(Volt,first)
   close(17)
 end subroutine SCF_GFs
 
+  
+!=====================================================
+!================== Full GFs =========================
+!===================================================== 
+
+  subroutine G_full(iw, Volt)
+!... Full Greens function, leaves Retarded and Advanced in the work arrays, application
+!    of Eq. (16) and (17), but with the full Sigmas, Eq. (3), (7) and (8) in CHE
+   implicit none
+   integer :: i, j, iw
+   real*8 :: Volt, w 
+   complex*16 :: Omr, SigG, SigL
+   complex*16, dimension(Natoms,Natoms) ::  SigmaL, Sigma1, SigmaR, w1,w2 ,SigmaG
+   
+!............full SigmaR due to interactions Eq. (7)
+   SigmaR = (0.d0, 0.d0); SigmaL = (0.d0, 0.d0)
+      
+   if (order .eq. 1) then
+      do i = 1, Natoms
+         SigmaR(i,i) = SigmaR(i,i) - im*hbar*Hub(i)*G_nil(i) ! LK <== must be minus!
+      end do
+   else if (order .eq. 2) then 
+      do i = 1, Natoms
+         do j = 1, Natoms
+            Omr = Omega_R(i,j,iw)
+            if (i .eq. j) then 
+               SigmaR(i,j) = SigmaR(i,j)  - im*hbar*Hub(i)*G_nil(i) + (Hub(j)*Hub(i)*OmR)*hbar**2
+            else 
+               SigmaR(i,j) = SigmaR(i,j) + (Hub(j)*Hub(i)*OmR)*hbar**2
+            end if
+         end do
+      end do
+
+!..............full SigmaL and SigmaG, Eq. (3) and (4)     
+!.....Interaction contribution of both Sigmas     
+      do i = 1, Natoms
+         do j = 1, Natoms
+            call Omega_int_SigL_SigG(j,i, iw, SigL, SigG)  
+            SigmaG(i,j) = SigmaG(i,j) + Hub(i)*Hub(j)*SigG*hbar**2 
+            SigmaL(i,j) = SigmaL(i,j) + Hub(i)*Hub(j)*SigL*hbar**2
+         end do
+      end do
+   end if
+
+   if(verb) then
+      write(3,*) iw,' SigmaR'
+      do i=1,Natoms
+         write(3,*) i, (SigmaR(i,j),j=1,Natoms)
+      end do
+      write(3,*) iw,' SigmaL'
+      do i=1,Natoms
+         write(3,*) i, (SigmaL(i,j),j=1,Natoms)
+      end do
+      write(3,*) iw,' SigmaG'
+   end if
+!..real variable interactions turns off the Interaction component of the sigmas 
+!............full Gr and Ga, Eq. (5) and (6)
+   
+  w = omega(iw)
+  w1 = -H + 0.5d0*(im/hbar)*(GammaL + GammaR) - SigmaR ! LK <== must be + for emb and minus for interaction sigma
+  do i = 1 , Natoms
+     w1(i,i) = w1(i,i) + hbar*(w+0.01)
+  end do
+  
+  call Inverse_complex(Natoms, w1, info)
+  call Hermitian_Conjg(w1, Natoms, w2)
+  
+  GFf%R(:,:,iw) = w1; GFf%A(:,:,iw) = w2
+
+!.....Embedding contribution of both Sigmas
+
+  SigmaL =  im*(fermi_dist(w, Volt)*GammaL + fermi_dist(w, 0.d0)*GammaR)/hbar + SigmaL 
+  SigmaG =  im*((fermi_dist(w, Volt)-1.d0)*GammaL + (fermi_dist(w, 0.d0)-1.d0)*GammaR)/hbar + SigmaG
+
+  !.............full GL and GG, Eq. (16) and (17)
+  
+  GFf%L(:,:,iw) = matmul(matmul(w1, SigmaL), w2) !.. GL = Gr * SigmaL * Ga
+  !GFf%G(:,:,iw) = matmul(matmul(w1, SigmaG), w2) !.. GG = Gr * SigmaG * Ga
+  GFf%G(:,:,iw) = GFf%L(:,:,iw) + GFf%R(:,:,iw) - GFf%A(:,:,iw)
+
+  write(3,*) '==================with Identity================'
+  write(3,*) GF0%L(1,1,iw) + GF0%R(1,1,iw) - GF0%A(1,1,iw), GF0%L(2,2,iw) + GF0%R(2,2,iw) - GF0%A(2,2,iw), &
+       GF0%L(3,3,iw) + GF0%R(3,3,iw) - GF0%A(3,3,iw)
+
+  
+  write(3,*) GFf%L(1,1,iw) + GFf%R(1,1,iw) - GFf%A(1,1,iw), GFf%L(2,2,iw) + GFf%R(2,2,iw) - GFf%A(2,2,iw), &
+       GFf%L(3,3,iw) + GFf%R(3,3,iw) - GFf%A(3,3,iw)
+
+  
+  write(3,*) '-----------GF Retarded ------------'
+  do i = 1, Natoms
+     write(3,*) (GFf%R(i,j,1), j= 1, Natoms)
+  end do
+  write(3,*) '-----------------------------------------'
+  write(3,*) '-----------GF Lesser ------------'
+  do i = 1, Natoms
+     write(3,*) (GFf%R(i,j,1), j= 1, Natoms)
+  end do
+  write(3,*) '-----------------------------------------'
+
+  STOP
+end subroutine G_full
+
+
+!=====================================================
+!======== Non-interacting GFs ========================
+!=====================================================  
+
+  
+  !......Calculates lesser Greens function at time = 0
+  subroutine GL_of_0()        !LK <======= a slight change
+    !.....Lesser Greens function at time = 0
+    !.....ei - eigenvalues of the Hamiltonian 
+    implicit none
+    integer :: i, k1
+    real*8 :: pp
+    complex*16 :: s
+    
+    pp=delta/(2.d0*pi)
+    do i = 1, Natoms 
+       s =(0.d0, 0.d0)
+       do k1 = 1, N_of_w
+          s = s + GF0%L(i,i,k1)
+       end do
+       G_nil(i)=s*pp
+    end do
+  end subroutine GL_of_0
+  
+  subroutine G0_R_A()
+    !............non-interacting Greens functions: GR and Ga,  Eq. (5) and Eq. (6) in 'Current_Hubbard_Equations' document (CHE)
+    implicit none
+    integer :: j, i
+    real*8 :: w
+   
+    do j = 1, N_of_w
+       work1 = -H + 0.5d0*(im/hbar) * (GammaL + GammaR) !LK <========= must be +
+       w = omega(j)
+       do i = 1 , Natoms
+          work1(i,i) = work1(i,i) + hbar*(w+0.01)
+        end do
+       
+       call Inverse_complex(Natoms, work1, info)
+       call Hermitian_Conjg(work1, Natoms, work2)
+       
+       GF0%r(:,:,j) = work1
+       GF0%a(:,:,j) = work2
+    end do  
+    
+  end subroutine G0_R_A
+  
+  subroutine G0_L_G(Volt)
+!............non-interacting Greens functions: G> and G< for all omega on the grid, Eq. (16) and (17) in CHE
+    implicit none
+    real*8 :: Volt, w
+    integer :: j, i
+    
+    work1 = (0.d0, 0.d0) ; work2 =(0.d0, 0.d0) ; work3 = (0.d0, 0.d0); work4 = (0.d0, 0.d0)
+    do j = 1 , N_of_w
+       w = omega(j)
+       work1 = GF0%r(:,:,j) 
+       work2 = GF0%a(:,:,j)
+
+       work3 = matmul(matmul(work1, im*(fermi_dist(w, Volt)*GammaL + fermi_dist(w, 0.d0)*GammaR)), work2) 
+     !  work4 = matmul(matmul(work1, im*((fermi_dist(w, Volt)-1.d0)*GammaL + (fermi_dist(w, 0.d0)-1.d0)*GammaR)), work2)
+       GF0%L(:,:,j) = work3
+       !   GF0%G(:,:,j) = work4
+       GF0%G(:,:,j) =  GF0%L(:,:,j) + GF0%R(:,:,j) - GF0%A(:,:,j)
+    end do
+    
+  end subroutine G0_L_G 
+
+!=====================================================
+!========Calcualtions needed for full GFs=============
+!===================================================== 
+  
+!......................Calculation of Omega terms for the self-energies, Eq. (9) in CHE
+  complex*16 function Omega_R(i, j, iw)
+    implicit none
+    integer :: i, j, iw, k_1, k_2, k_3
+    complex*16 :: Omr
+    real*8 :: pp
+    
+    Omr = (0.d0, 0.d0)
+    do k_1 = 1, N_of_w
+       do k_2 = 1, N_of_w
+          
+          k_3 = iw- k_1 +k_2
+          if (k_3 .ge. 1 .and. k_3 .le. N_of_w) then
+             Omr = Omr + GF0%r(i,j,k_1)*GF0%L(j,i,k_2)*GF0%L(i,j,k_3)  + GF0%L(i,j,k_1)*GF0%a(j,i,k_2)*GF0%L(i,j,k_3) &
+                  + GF0%L(i,j,k_1)*GF0%G(j,i,k_2)*GF0%a(i,j,k_3)
+          end if
+
+       end do
+    end do
+
+    pp = delta/(2.d0*pi) !LK <== error in brackets
+    Omega_R = Omr*pp*pp
+  end function Omega_R
+  
+  subroutine Omega_int_SigL_SigG(i,j, iw, SigL, SigG) !... interaction contributions of Eq. (3) and (4) in CHE
+    implicit none
+    integer :: i, j, k1, k2, k3, iw
+    complex*16 :: SigL, SigG
+    real*8 :: pp
+
+    
+    pp = delta/(2.d0*pi) 
+    SigL=(0.0d0, 0.0d0); SigG = (0.d0, 0.d0) 
+    do k1=1,N_of_w
+       do k2=1,N_of_w        
+          k3=iw-k1+k2
+          if(k3 .ge. 1 .and. k3 .le. N_of_w) then
+             SigL = SigL + GF0%L(i,j,k1)*GF0%G(j,i,k2)*GF0%L(i,j,k3) 
+             SigG = SigG + GF0%G(i,j,k1)*GF0%L(j,i,k2)*GF0%G(i,j,k3) 
+          end if
+       end do
+    end do
+    
+    SigL = SigL*pp*pp ; SigG = SigG*pp*pp
+  end subroutine Omega_int_SigL_SigG
+
 !====================================================
-!========== Self consistency field calculations =====
+!========== Printing Routines ================= =====
 !====================================================
 
 subroutine print_sf(iteration)

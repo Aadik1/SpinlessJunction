@@ -27,6 +27,7 @@ program StypeJunction_Spinless
   allocate(GammaL(Natoms, Natoms)); allocate(GammaR(Natoms, Natoms))
   
   call Central_Hamiltonian(H, Natoms, 4.d0, -2.d0)
+  !call Island_Hamiltonian(H,Natoms)
   
   GammaL = (0.d0, 0.d0); GammaL(1,1) = 1.d0
   GammaR = (0.d0, 0.d0); GammaR(Natoms, Natoms) = 1.d0
@@ -34,13 +35,11 @@ program StypeJunction_Spinless
   allocate(Hub(Natoms))
   open(11, file='Hubbard_info.dat', status='unknown')
   do i = 1, Natoms
-     Hub(i) = Gamma0/10.d0 !...read(11, *) Hub(i)
+     Hub(i) = U_int !...read(11, *) Hub(i)
   end do
   close(11)
 
-  print *, 'HUBBARD:', Hub
-
-!.......................Finds the eigenvalues of the Central Hamiltonian and uses
+  !.......................Finds the eigenvalues of the Central Hamiltonian and uses
 !                       it to define the w-grid
   
   allocate(Eigenvec(Natoms, Natoms))  
@@ -90,15 +89,15 @@ program StypeJunction_Spinless
   !  print *, 'Pre-voltage'
   first=.true.
   do k = 0, Volt_range
-     V1 = V + k*0.05
+     V1 = 0.d0!V + k*0.05
 
      call SCF_GFs(V1,first)
-     
      GF0%r=GFf%r ; GF0%a=GFf%a ; GF0%L=GFf%L ; GF0%G=GFf%G
      if(first) first=.false.
      
      write(30, *) V1, Current(V1)
      print *, 'Progress:', k/(Volt_range*0.01), '%', Current(V1)
+     stop
   end do
   
   close(30) 
