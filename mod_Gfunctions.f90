@@ -115,7 +115,7 @@ subroutine SCF_GFs(Volt,first)
      !$OMP& PRIVATE(iw, INFO)
      
      do iw = 1, N_of_w
-        call G_full(iw, Volt, Natoms)
+        call G_full(iw, Volt)
      end do
      !$OMP END PARALLEL DO
      
@@ -149,12 +149,6 @@ subroutine SCF_GFs(Volt,first)
      GF0%G = pullay*GFf%G + (1.0d0-pullay)*GF0%G
      !$OMP END CRITICAL
      
-!LK printing the spectral function
-
-  !   if (iteration .eq. 2) then
-  !      STOP
-  !   end if
-      
      call print_sf(iteration)  
      if (sqrt(err) .lt. epsilon .or. order .eq. 0) then
         write(*,*)'... REACHED REQUIRED ACCURACY ...'
@@ -169,15 +163,17 @@ end subroutine SCF_GFs
 !================== Full GFs =========================
 !===================================================== 
 
-  subroutine G_full(iw, Volt,N)
+  subroutine G_full(iw, Volt)
 !... Full Greens function, leaves Retarded and Advanced in the work arrays, application
 !    of Eq. (16) and (17), but with the full Sigmas, Eq. (3), (7) and (8) in CHE
    implicit none
-   integer :: i, j, iw, N
+   integer :: i, j, iw
    real*8 :: Volt, w 
    complex*16 :: Omr, SigG, SigL
-   complex*16, dimension(N,N) ::  SigmaL, SigmaR, w1,w2 ,SigmaG
+   complex*16, allocatable, dimension(:,:) ::  SigmaL, SigmaR, SigmaG,  work_1, work_2
    
+   allocate(SigmaL(Natoms, Natoms), SigmaG(Natoms, Natoms), SigmaR(Natoms, Natoms))
+   allocate(work_1(Natoms, Natoms), work_2(Natoms, Natoms))
 !............full SigmaR due to interactions Eq. (7)
    SigmaR = (0.d0, 0.d0); SigmaL = (0.d0, 0.d0)
       
@@ -224,15 +220,15 @@ end subroutine SCF_GFs
 !............full Gr and Ga, Eq. (5) and (6)
    
   w = omega(iw)
-  w1 = -H + 0.5d0*(im/hbar)*(GammaL + GammaR) - SigmaR ! LK <== must be + for emb and minus for interaction sigma
+  work_1 = -H + 0.5d0*(im/hbar)*(GammaL + GammaR) - SigmaR ! LK <== must be + for emb and minus for interaction sigma
   do i = 1 , Natoms
-     w1(i,i) = w1(i,i) + hbar*(w+im*0.01)
+     work_1(i,i) = work_1(i,i) + hbar*(w+im*0.01)
   end do
   
-  call Inverse_complex(Natoms, w1, info)
-  call Hermitian_Conjg(w1, Natoms, w2)
+  call Inverse_complex(Natoms, work_1, info)
+  call Hermitian_Conjg(work_1, Natoms, work_2)
   
-  GFf%R(:,:,iw) = w1; GFf%A(:,:,iw) = w2
+  GFf%R(:,:,iw) = work_1; GFf%A(:,:,iw) = work_2
 
 !.....Embedding contribution of both Sigmas
 
@@ -241,9 +237,11 @@ end subroutine SCF_GFs
 
   !.............full GL and GG, Eq. (16) and (17)
   
-  GFf%L(:,:,iw) = matmul(matmul(w1, SigmaL), w2) !.. GL = Gr * SigmaL * Ga
-  GFf%G(:,:,iw) = matmul(matmul(w1, SigmaG), w2) !.. GG = Gr * SigmaG * Ga
+  GFf%L(:,:,iw) = matmul(matmul(work_1, SigmaL), work_2) !.. GL = Gr * SigmaL * Ga
+  GFf%G(:,:,iw) = matmul(matmul(work_1, SigmaG), work_2) !.. GG = Gr * SigmaG * Ga
   !GFf%G(:,:,iw) = GFf%L(:,:,iw) + GFf%R(:,:,iw) - GFf%A(:,:,iw)
+
+  deallocate(SigmaL,SigmaG,SigmaR); deallocate(work_1, work_2)
 end subroutine G_full
 
 
@@ -269,6 +267,7 @@ end subroutine G_full
        end do
        G_nil(i)=s*pp
     end do
+
   end subroutine GL_of_0
   
   subroutine G0_R_A()
@@ -311,7 +310,6 @@ end subroutine G_full
        GF0%G(:,:,j) = work4
        !GF0%G(:,:,j) =  GF0%L(:,:,j) + GF0%R(:,:,j) - GF0%A(:,:,j)
     end do
-    
   end subroutine G0_L_G 
 
 !=====================================================
