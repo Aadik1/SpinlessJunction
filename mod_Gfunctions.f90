@@ -11,10 +11,8 @@ module GreensFunctions
   
   complex*16, allocatable, dimension(:,:) :: GammaL, GammaR, Eigenvec
   complex*16, allocatable, dimension(:) :: G_nil
-!  complex*16, allocatable, dimension(:,:) ::  SigmaL, SigmaG, SigmaR
   complex*16, allocatable, dimension(:,:) ::  SigmaL, SigmaR
   complex*16, allocatable, dimension(:,:) :: work1, work2, work3, work4
-  
   
   complex*16  :: prodr, proda, prodL, prodG
   complex*16  :: IntL, IntG, OmCon, OmCon1, Om_Con_Inf
@@ -31,7 +29,7 @@ module GreensFunctions
   end type GF_full
   type(GF_full) :: GFf
 
-  !........ the wheel memory for Pulay
+!........ the wheel memory for Pulay
   integer :: iP,size
   type :: GX
      complex*16, allocatable, dimension(:,:,:,:) :: r_in,r_out,l_out
@@ -40,7 +38,6 @@ module GreensFunctions
   real*8,allocatable,dimension(:,:) :: Ov,Bm,Rhs
   real*8,allocatable,dimension(:) :: C_coeff
   integer,dimension(:),allocatable :: IPIV
-
 
 CONTAINS 
   
@@ -57,7 +54,6 @@ CONTAINS
 !====================================================
 !========== Self consistency field calculations =====
 !====================================================
-
 
 !.............need G0f%L to calculate GL_of_0
 !.............Calculates GFs at every omega and Voltage simultaneously 
@@ -216,11 +212,7 @@ subroutine SCF_GFs(Volt,first)
      end if
   END DO
   
-!  write(*,*) 'exiting the convergence loop'
-!  call print_3matrix(100,GF0%g,'GFg',Natoms,N_of_w)
-
 end subroutine SCF_GFs
-  
   
 !=====================================================
 !================== Full GFs =========================
@@ -262,30 +254,19 @@ end subroutine SCF_GFs
       do i = 1, Natoms
          do j = 1, Natoms
             call Omega_int_SigL_SigG(i,j, iw, SigL, SigG)  
-            SigmaG(i,j) =  Hub(i)*Hub(j)*SigG*hbar**2 
+!            SigmaG(i,j) =  Hub(i)*Hub(j)*SigG*hbar**2 
             SigmaL(i,j) =  Hub(i)*Hub(j)*SigL*hbar**2
          end do
       end do
    end if
 
-   if(verb) then
-      write(3,*) iw,' SigmaR'
-      do i=1,Natoms
-         write(3,*) i, (SigmaR(i,j),j=1,Natoms)
-      end do
-      write(3,*) iw,' SigmaL'
-      do i=1,Natoms
-         write(3,*) i, (SigmaL(i,j),j=1,Natoms)
-      end do
-      write(3,*) iw,' SigmaG'
-   end if
 !..real variable interactions turns off the Interaction component of the sigmas 
 !............full Gr and Ga, Eq. (5) and (6)
    
   w = omega(iw)
-  work_1 = -H + 0.5d0*(im/hbar)*(GammaL + GammaR) - SigmaR ! LK <== must be + for emb and minus for interaction sigma
+  work_1 = -H + 0.5d0*(im/hbar)*(GammaL + GammaR) - SigmaR 
   do i = 1 , Natoms
-     work_1(i,i) = work_1(i,i) + hbar*(w+im*0.01)
+     work_1(i,i) = work_1(i,i) + hbar*w
   end do
   
   call Inverse_complex(Natoms, work_1, info)
@@ -296,45 +277,22 @@ end subroutine SCF_GFs
 !.....Embedding contribution of both Sigmas
 
   SigmaL =  im*(fermi_dist(w, Volt)*GammaL + fermi_dist(w, 0.d0)*GammaR)/hbar + SigmaL 
-  SigmaG =  im*((fermi_dist(w, Volt)-1.d0)*GammaL + (fermi_dist(w, 0.d0)-1.d0)*GammaR)/hbar + SigmaG
+!  SigmaG =  im*((fermi_dist(w, Volt)-1.d0)*GammaL + (fermi_dist(w, 0.d0)-1.d0)*GammaR)/hbar + SigmaG
 
-  !.............full GL and GG, Eq. (16) and (17)
+  !.............full GL and GG, Eq. (16) and (17) 
   
-  GFf%L(:,:,iw) = matmul(matmul(work_1, SigmaL), work_2) !.. GL = Gr * SigmaL * Ga
- ! GFf%G(:,:,iw) = matmul(matmul(work_1, SigmaG), work_2) !.. GG = Gr * SigmaG * Ga
-  GFf%G(:,:,iw) = GFf%L(:,:,iw) + GFf%R(:,:,iw) - GFf%A(:,:,iw)
+  GFf%L(:,:,iw) = matmul(matmul(work_1, SigmaL), work_2) 
+!  GFf%G(:,:,iw) = matmul(matmul(work_1, SigmaG), work_2)
 
   deallocate(SigmaL,SigmaG,SigmaR); deallocate(work_1, work_2)
 end subroutine G_full
-
 
 !=====================================================
 !======== Non-interacting GFs ========================
 !=====================================================  
 
-  
-  !......Calculates lesser Greens function at time = 0
-  subroutine GL_of_0()        !LK <======= a slight change
-    !.....Lesser Greens function at time = 0
-    !.....ei - eigenvalues of the Hamiltonian 
-    implicit none
-    integer :: i, k1
-    real*8 :: pp
-    complex*16 :: s
-    
-    pp=delta/(2.d0*pi)
-    do i = 1, Natoms 
-       s =(0.d0, 0.d0)
-       do k1 = 1, N_of_w
-          s = s + GF0%L(i,i,k1)
-       end do
-       G_nil(i)=s*pp
-    end do
-
-  end subroutine GL_of_0
-  
   subroutine G0_R_A()
-    !............non-interacting Greens functions: GR and Ga,  Eq. (5) and Eq. (6) in 'Current_Hubbard_Equations' document (CHE)
+!............non-interacting Greens functions: GR and Ga,  Eq. (5) and Eq. (6) in 'Current_Hubbard_Equations' document (CHE)
     implicit none
     integer :: j, i
     real*8 :: w
@@ -343,14 +301,13 @@ end subroutine G_full
        work1 = -H + 0.5d0*(im/hbar) * (GammaL + GammaR) !LK <========= must be +
        w = omega(j)
        do i = 1 , Natoms
-          work1(i,i) = work1(i,i) + hbar*(w+ im*0.01)
+          work1(i,i) = work1(i,i) + hbar*w
        end do
        
        call Inverse_complex(Natoms, work1, info)
        call Hermitian_Conjg(work1, Natoms, work2)
        
-       GF0%r(:,:,j) = work1
-       GF0%a(:,:,j) = work2
+       GF0%r(:,:,j) = work1 ; GF0%a(:,:,j) = work2
     end do  
     
   end subroutine G0_R_A
@@ -368,11 +325,12 @@ end subroutine G_full
        work2 = GF0%a(:,:,j)
 
        work3 = matmul(matmul(work1, im*(fermi_dist(w, Volt)*GammaL + fermi_dist(w, 0.d0)*GammaR)), work2) 
-       work4 = matmul(matmul(work1, im*((fermi_dist(w, Volt)-1.d0)*GammaL + (fermi_dist(w, 0.d0)-1.d0)*GammaR)), work2)
-       GF0%L(:,:,j) = work3
-       GF0%G(:,:,j) = work4
-       !GF0%G(:,:,j) =  GF0%L(:,:,j) + GF0%R(:,:,j) - GF0%A(:,:,j)
+!      work4 = matmul(matmul(work1, im*((fermi_dist(w, Volt)-1.d0)*GammaL + (fermi_dist(w, 0.d0)-1.d0)*GammaR)), work2)
+      GF0%L(:,:,j) = work3
+!       GF0%G(:,:,j) = work4
     end do
+    GF0%G =  GF0%L + GF0%R - GF0%A
+    
   end subroutine G0_L_G 
 
 !=====================================================
@@ -392,14 +350,15 @@ end subroutine G_full
           
           k_3 = iw- k_1 +k_2
           if (k_3 .ge. 1 .and. k_3 .le. N_of_w) then
-             Omr = Omr + GF0%r(i,j,k_1)*GF0%L(j,i,k_2)*GF0%L(i,j,k_3)  + GF0%L(i,j,k_1)*GF0%a(j,i,k_2)*GF0%L(i,j,k_3) &
-                  + GF0%L(i,j,k_1)*GF0%G(j,i,k_2)*GF0%a(i,j,k_3)
+             Omr = Omr + GF0%r(i,j,k_1)*GF0%L(j,i,k_2)*GF0%G(i,j,k_3)  &
+                  + GF0%L(i,j,k_1)*GF0%L(j,i,k_2)*GF0%r(i,j,k_3) &
+                  + GF0%L(i,j,k_1)*GF0%a(j,i,k_2)*GF0%L(i,j,k_3)
           end if
 
        end do
     end do
 
-    pp = delta/(2.d0*pi) !LK <== error in brackets
+    pp = delta/(2.d0*pi) 
     Omega_R = Omr*pp*pp
   end function Omega_R
   
@@ -417,50 +376,58 @@ end subroutine G_full
           k3=iw-k1+k2
           if(k3 .ge. 1 .and. k3 .le. N_of_w) then
              SigL = SigL + GF0%L(i,j,k1)*GF0%G(j,i,k2)*GF0%L(i,j,k3) 
-             SigG = SigG + GF0%G(i,j,k1)*GF0%L(j,i,k2)*GF0%G(i,j,k3) 
+!             SigG = SigG + GF0%G(i,j,k1)*GF0%L(j,i,k2)*GF0%G(i,j,k3) 
           end if
        end do
     end do
     
-    SigL = SigL*pp*pp ; SigG = SigG*pp*pp
+    SigL = SigL*pp*pp !; SigG = SigG*pp*pp
   end subroutine Omega_int_SigL_SigG
 
-!====================================================
-!========== Printing Routines ================= =====
-!====================================================
+!......Calculates lesser Greens function at time = 0
+  subroutine GL_of_0()        !LK <======= a slight change
+    !.....Lesser Greens function at time = 0
+    !.....ei - eigenvalues of the Hamiltonian 
+    implicit none
+    integer :: i, k1
+    real*8 :: pp
+    complex*16 :: s
+    
+    pp=delta/(2.d0*pi)
+    do i = 1, Natoms 
+       s =(0.d0, 0.d0)
+       do k1 = 1, N_of_w
+          s = s + GF0%L(i,i,k1)
+       end do
+       G_nil(i)=s*pp
+    end do
 
-subroutine print_sf(iteration)
-  integer :: iteration,n,iw,j
-  character :: fn*3 
+  end subroutine GL_of_0
   
-  n=Natoms ; if(n.gt.10) n=10
-  write(fn,'(i0)') iteration
-  open(7,file='sf_'//trim(fn)//'.dat',status='unknown')
-  do iw=1,N_of_w
-     write(7,'(f10.5,x,10(e12.5,x))') omega(iw),(- 2.d0*hbar*AIMAG(GF0%R(j,j,iw)),j=1,n)
-  end do
-  close(7)
-  write(*,*) '... written sf_'//trim(fn)//'.dat'
-end subroutine print_sf
+!====================================================
+!========== calcualtion of the current ==============
+!====================================================
 
-subroutine print_3matrix(iteration,X,name)
-  integer :: iteration,n,iw,j,i
-  character :: fn*3,name*3
-  complex*16 :: X(Natoms,Natoms,N_of_w)
-   
-  n=Natoms ; if(n.gt.10) n=10
-  write(fn,'(i0)') iteration
-  open(7,file=name//'_'//trim(fn)//'.dat',status='unknown')
-  do iw=1,N_of_w
-     write(7,'(/i3,x,f10.5)') iw,omega(iw)
-     do i=1,n
-        write(7,*) i,j,(X(i,j,iw),j=1,n)
-     end do
-  end do
-  close(7)
-  write(*,*) '... written '//name//'_'//trim(fn)//'.dat'
-end subroutine print_3matrix
+subroutine trans(iw, Volt, trns) 
+  implicit none
+  integer :: iw,i,j
+  real*8 :: Volt, w,trns
+  complex*16 :: trace1
+  complex*16, allocatable, dimension(:,:) :: work_1, work_2,work_3
 
+  allocate(work_1(Natoms, Natoms),work_2(Natoms, Natoms),work_3(Natoms, Natoms))
+  
+  w = omega(iw)
+  work_3 = (0.d0, 0.d0) ; work_1 = GF0%L(:,:,iw) ; work_2 = GF0%G(:,:,iw)
+
+  work_3 = im*matmul(GammaL,(fermi_dist(w, Volt)-1.d0)*work_1 - fermi_dist(w, Volt)*work_2)
+  
+  call trace_of_A(work_3, Natoms, trace1)
+  trns = real(trace1)/(2.d0*pi)
+
+  deallocate(work_1,work_2,work_3)
+  
+end subroutine trans
 
 !====================================================
 !========== Pulay's Routines ========================
@@ -507,5 +474,41 @@ subroutine C_coefficients()
   deallocate(Bm)
 
 end subroutine C_coefficients
+
+!====================================================
+!========== Printing Routines ================= =====
+!====================================================
+
+subroutine print_sf(iteration)
+  integer :: iteration,n,iw,j
+  character :: fn*3 
+  
+  n=Natoms ; if(n.gt.10) n=10
+  write(fn,'(i0)') iteration
+  open(7,file='sf_'//trim(fn)//'.dat',status='unknown')
+  do iw=1,N_of_w
+     write(7,'(f10.5,x,10(e12.5,x))') omega(iw),(- 2.d0*hbar*AIMAG(GF0%R(j,j,iw)),j=1,n)
+  end do
+  close(7)
+  write(*,*) '... written sf_'//trim(fn)//'.dat'
+end subroutine print_sf
+
+!====================================================
+!========== restart routines  =======================
+!====================================================
+
+subroutine save_GFs()
+  implicit none
+  open(1,file='Greens_functions.dat',form='unformatted',status='unknown')
+  write(1) GF0%r,GF0%a,GF0%l,GF0%g
+  close(1)
+end subroutine save_GFs
+
+subroutine read_saved_GFs()
+  implicit none
+  open(1,file='Greens_functions.dat',form='unformatted',status='old')
+  read(1) GF0%r,GF0%a,GF0%l,GF0%g
+  close(1)
+end subroutine read_saved_GFs
 
 end module GreensFunctions

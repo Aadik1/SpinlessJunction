@@ -2,7 +2,7 @@ program StypeJunction_Spinless
   use DefineHamiltonian
   use GreensFunctions
   implicit none
-  real*8 :: V1, Current, total_time
+  real*8 :: V1, total_time,curr,current
   integer ::  k, i, start_tick, end_tick, rate, max_count
   character(len=30) :: vfn
   logical :: first
@@ -87,27 +87,31 @@ program StypeJunction_Spinless
   allocate(GP%l_out(Natoms,Natoms,N_of_w,iP))
   allocate(Ov(iP,iP),C_coeff(iP),Rhs(iP+1,1),IPIV(iP+1))
   
-  
 !.......................Calculates and plots Voltage vs Current curve  
 
-  open(3, file='Print.dat', status='unknown')
+  if(restart) then
+     call read_saved_GFs() ; first=.false.
+  else
+     first=.true.
+  end if
+  
   write(vfn,'(i0)') order
   open(30, file='Volt_Current_'//trim(vfn)//'.dat', status='unknown')  
   !  print *, 'Pre-voltage'
-  first=.true.
+
   do k = 0, Volt_range
      V1 = V + k*0.05
 
      call SCF_GFs(V1,first)
-     GF0%r=GFf%r ; GF0%a=GFf%a ; GF0%L=GFf%L ; GF0%G=GFf%G
+     call save_GFs()
      if(first) first=.false.
-     
-     write(30, *) V1, Current(V1)
-     print *, 'Progress:', k/(Volt_range*0.01), '%', Current(V1)
+
+     curr=Current(V1)
+     write(30, *) V1, curr
+     print *, 'Progress:', k/(Volt_range*0.01), '%', curr
   end do
   
   close(30) 
-  close(3)
   
   call SYSTEM_CLOCK(COUNT=end_tick)
   total_time = real(end_tick - start_tick)/real(rate)
@@ -125,3 +129,19 @@ program StypeJunction_Spinless
   deallocate(GP%r_in,GP%r_out,GP%l_out,Ov)
   deallocate(GammaL, GammaR, G_nil)
 end program StypeJunction_Spinless
+
+real*8 function Current(Volt)
+  use GreensFunctions
+  implicit none
+  real*8 :: Volt, J_L, trns, trace
+  integer :: iw !, iw_in, iw_f
+  
+  J_L = 0.d0; trace = 0.d0
+  do iw = 1, N_of_w
+     call trans(iw,Volt,trns)
+     J_L = J_L + trns
+  end do
+  Current = J_L*(delta/hbar)
+end function Current
+
+  

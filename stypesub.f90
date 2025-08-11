@@ -7,20 +7,45 @@ subroutine input()
   !...order--> 0 : non-interacting, 1: first order interactions, 2: second order interactions 
   read(2, *) T, V, mu, Volt_range, U_int
   write(*,*) 'T:', T, 'V:', V, 'mu:', mu, 'Volt_range:', Volt_range, U_int
-  read(2,*) order, method
+  read(2,*) order,method
   read(2,*) Natoms
   write(*,*) 'Order:', order, 'Natoms:', Natoms
   read(2,*) dw,up,delta
   write(*,*) 'dw:', dw, 'up:', up,'delta:', delta
-  read(2,*) pullay
+  read(2,*) pullay,iP
   write(*,*) 'pulay:', pullay
   read(2,'(a)') ver
   verb=.false. ; if(ver.eq.'Y') verb=.true.
+  read(2,*) restart
   close(2)
   beta = 1.d0/(kb * T)
-  
+  if(restart) then
+     write(*,*) '.... RESTART from the previous GFs ....'
+  else
+     write(*,*) '.... NEW start ....'
+  end if
 end subroutine input
+
+subroutine print_3matrix(iteration,X,name,Natoms,N_of_w)
+  integer :: iteration,n,iw,j,i,Natoms,N_of_w
+  character :: fn*3,name*3
+  complex*16 :: X(Natoms,Natoms,N_of_w)
+
+  write(*,*) 'print_3 => ',iteration,Natoms,name,N_of_w
   
+  n=Natoms ; if(n.gt.10) n=10
+  write(fn,'(i0)') iteration
+  open(7,file=name//'_'//trim(fn)//'.dat',status='unknown')
+  do iw=1,N_of_w
+     write(7,'(/i3,x,f10.5)') iw
+     do i=1,n
+        write(7,*) i,j,(X(i,j,iw),j=1,n)
+     end do
+  end do
+  close(7)
+  write(*,*) '... written '//name//'_'//trim(fn)//'.dat'
+end subroutine print_3matrix
+
 subroutine PrintFunctions()
   use GreensFunctions
   implicit none
@@ -58,41 +83,3 @@ subroutine PrintFunctions()
 end subroutine PrintFunctions
 
 
-real*8 function trans(iw, Volt) !....square bracket terms of Eq. (2) in CHE
-  use GreensFunctions
-  implicit none
-  integer :: iw,i,j
-  real*8 :: Volt, w
-  complex*16 :: trace1
-
-  w = omega(iw)
-!  work3 = (0.d0, 0.d0)
-
-  work1 = GF0%L(:,:,iw)
-  work2 = GF0%G(:,:,iw)
-
-  work3 = im*matmul(GammaL, (fermi_dist(w, Volt)-1.d0)*work1 - fermi_dist(w, Volt)*work2)
-  
-  call trace_of_A(work3, Natoms, trace1)
-  trans = real(trace1)/(2.d0*pi)
-
-end function trans
-
-real*8 function Current(Volt)
-  use GreensFunctions
-  implicit none
-  real*8 :: Volt, J_L, trans, trace !, w_in, w_f
-  integer :: iw !, iw_in, iw_f
-  
-!......useful for calculating the non-interacting case, finds the integration window
-  !call int_window(w_in, w_f, Volt) 
-  !iw_in = w_grid(w_in)
-  !iw_f = w_grid(w_f)
-
-  J_L = 0.d0; trace = 0.d0
-  do iw = 1, N_of_w
-     trace = trans(iw, Volt)
-     J_L = J_L + trace
-  end do
-  Current = J_L*(delta/hbar)
-end function Current

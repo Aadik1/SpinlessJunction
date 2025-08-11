@@ -16,6 +16,7 @@ module DefineHamiltonian
   complex*16, dimension(:,:) :: Pauli_x(2,2), Pauli_y(2,2), Pauli_z(2,2)
   complex*16, allocatable, dimension(:,:) :: H
 
+  logical :: restart
 contains 
   
   subroutine helix_coordinate(r, i) !....specific to Right Handed helix
