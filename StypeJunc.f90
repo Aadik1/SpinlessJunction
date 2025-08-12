@@ -90,7 +90,7 @@ program StypeJunction_Spinless
   end if
   
   write(vfn,'(i0)') order
-  open(30, file='Volt_Current_'//trim(vfn)//'3.dat', status='unknown')  
+  open(30, file='Volt_Current_'//trim(vfn)//'.dat', status='unknown')  
   !  print *, 'Pre-voltage'
 
   do k = 0, Volt_range

@@ -4,7 +4,7 @@ module GreensFunctions
   implicit none
   integer :: INFO
 
-  real*8, parameter :: epsilon = 1e-6
+  real*8, parameter :: epsilon = 1e-9
   real*8, allocatable, dimension(:) ::  Hub, Ev
   real*8, allocatable, dimension(:) :: omega
   real*8 :: pullay
@@ -107,22 +107,9 @@ subroutine SCF_GFs(Volt,first)
      
      if (sqrt(err) .lt. epsilon .or. order .eq. 0) then
         write(*,*)'... REACHED REQUIRED ACCURACY ...'
-         exit
-      end if
-
-      if (pullay .le. 0.05) then
-         STOP
-      end if 
-
-      if (iteration .gt. 70) then
-         pullay = pullay - 0.1
-         write(*,*) 'Pulay:', pullay
-         go to 1
-      else if (iteration .gt. 200 .or. pulay .lt. 0.05) then
-         write(*,*) 'Did not converge at Volt:', Volt
-         STOP
-      end if
-      
+        exit
+     end if
+     
   END DO
   
 end subroutine SCF_GFs
@@ -179,7 +166,7 @@ end subroutine SCF_GFs
   w = omega(iw)
   work_1 = -H + 0.5d0*(im/hbar)*(GammaL + GammaR) - SigmaR 
   do i = 1 , Natoms
-     work_1(i,i) = work_1(i,i) + hbar*w
+     work_1(i,i) = work_1(i,i) + hbar*(w+im*0.01)
   end do
   
   call Inverse_complex(Natoms, work_1, info)
@@ -214,7 +201,7 @@ end subroutine G_full
        work1 = -H + 0.5d0*(im/hbar) * (GammaL + GammaR) !LK <========= must be +
        w = omega(j)
        do i = 1 , Natoms
-          work1(i,i) = work1(i,i) + hbar*w
+          work1(i,i) = work1(i,i) + hbar*(w+im*0.01)
        end do
        
        call Inverse_complex(Natoms, work1, info)
