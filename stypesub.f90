@@ -5,16 +5,14 @@ subroutine input()
   
   open(2, file='input.dat', status='old')
   !...order--> 0 : non-interacting, 1: first order interactions, 2: second order interactions 
-  read(2, *) T, V, mu, Volt_range, U_int
-  write(*,*) 'T:', T, 'V:', V, 'mu:', mu, 'Volt_range:', Volt_range, U_int
-  read(2,*) order,method
+  read(2, *) T, V, Vf, delv, mu, U_int
+ 
+  read(2,*) order
   read(2,*) Natoms
-  write(*,*) 'Order:', order, 'Natoms:', Natoms
   read(2,*) dw,up,delta
-  write(*,*) 'dw:', dw, 'up:', up,'delta:', delta
-  read(2,*) pullay,iP
-  write(*,*) 'pulay:', pullay
+  read(2,*) pullay
   read(2,'(a)') ver
+
   verb=.false. ; if(ver.eq.'Y') verb=.true.
   read(2,*) restart
   close(2)
@@ -24,6 +22,14 @@ subroutine input()
   else
      write(*,*) '.... NEW start ....'
   end if
+
+  Volt_range = (Vf - V)/delv
+  
+  write(*,*) 'T:', T, 'V:', V, 'mu:', mu, 'Volt_range:', Volt_range, 'U_int:', U_int
+  write(*,*) 'Order:', order, 'Natoms:', Natoms
+  write(*,*) 'dw:', dw, 'up:', up,'delta:', delta, 'delv:', delv
+  write(*,*) 'pulay:', pullay
+  
 end subroutine input
 
 subroutine print_3matrix(iteration,X,name,Natoms,N_of_w)

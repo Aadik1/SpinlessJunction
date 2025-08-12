@@ -1,10 +1,10 @@
 module DefineHamiltonian
   implicit none
-  integer :: Natoms, N_of_w, Volt_range, N_turns, N_ions, order, method
+  integer :: Natoms, N_of_w, Volt_range, N_turns, N_ions, order
 
   real*8, dimension(:,:) :: C(3,3)
   real*8, dimension(3) :: Rij, w0
-  real*8 :: T, mu, beta, V, delta, w_init, w_fin,up,dw
+  real*8 :: T, mu, beta, V, Vf, delta, w_init, w_fin,up,dw,delv
   real*8 :: E_CC, t_hop, hel_radius, hel_length, lamb, U_int
 
   real*8, parameter :: hbar = 1.d0 !6.582119569e-16 !ev s

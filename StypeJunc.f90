@@ -81,12 +81,6 @@ program StypeJunction_Spinless
   allocate(work1(Natoms, Natoms)) ; allocate(work2(Natoms, Natoms)) ; allocate(work3(Natoms, Natoms))
   allocate(work4(Natoms, Natoms))
 
-!................ allocate arrays for Pulay wheel memory
-
-  allocate(GP%r_in(Natoms,Natoms,N_of_w,iP),GP%r_out(Natoms,Natoms,N_of_w,iP))
-  allocate(GP%l_out(Natoms,Natoms,N_of_w,iP))
-  allocate(Ov(iP,iP),C_coeff(iP),Rhs(iP+1,1),IPIV(iP+1))
-  
 !.......................Calculates and plots Voltage vs Current curve  
 
   if(restart) then
@@ -96,11 +90,11 @@ program StypeJunction_Spinless
   end if
   
   write(vfn,'(i0)') order
-  open(30, file='Volt_Current_'//trim(vfn)//'.dat', status='unknown')  
+  open(30, file='Volt_Current_'//trim(vfn)//'3.dat', status='unknown')  
   !  print *, 'Pre-voltage'
 
   do k = 0, Volt_range
-     V1 = V + k*0.05
+     V1 = V + k*delv
 
      call SCF_GFs(V1,first)
      call save_GFs()
@@ -108,6 +102,7 @@ program StypeJunction_Spinless
 
      curr=Current(V1)
      write(30, *) V1, curr
+     flush(30)
      print *, 'Progress:', k/(Volt_range*0.01), '%', curr
   end do
   
@@ -126,7 +121,6 @@ program StypeJunction_Spinless
   deallocate(work1, work2, work3,work4)
   deallocate(H, Hub, omega)
   !deallocate(SigmaL, SigmaR)
-  deallocate(GP%r_in,GP%r_out,GP%l_out,Ov)
   deallocate(GammaL, GammaR, G_nil)
 end program StypeJunction_Spinless
 
