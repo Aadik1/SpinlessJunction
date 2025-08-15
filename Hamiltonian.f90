@@ -1,6 +1,6 @@
 module DefineHamiltonian
   implicit none
-  integer :: Natoms, N_of_w, Volt_range, N_turns, N_ions, order
+  integer :: Natoms, N_of_w, Volt_range, N_turns, N_ions, order, method
 
   real*8, dimension(:,:) :: C(3,3)
   real*8, dimension(3) :: Rij, w0

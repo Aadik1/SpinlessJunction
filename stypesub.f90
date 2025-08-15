@@ -7,10 +7,10 @@ subroutine input()
   !...order--> 0 : non-interacting, 1: first order interactions, 2: second order interactions 
   read(2, *) T, V, Vf, delv, mu, U_int
  
-  read(2,*) order
+  read(2,*) order, method
   read(2,*) Natoms
   read(2,*) dw,up,delta
-  read(2,*) pullay
+  read(2,*) pullay, iP
   read(2,'(a)') ver
 
   verb=.false. ; if(ver.eq.'Y') verb=.true.

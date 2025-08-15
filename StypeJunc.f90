@@ -81,6 +81,13 @@ program StypeJunction_Spinless
   allocate(work1(Natoms, Natoms)) ; allocate(work2(Natoms, Natoms)) ; allocate(work3(Natoms, Natoms))
   allocate(work4(Natoms, Natoms))
 
+  
+!................ allocate arrays for Pulay wheel memory
+
+  allocate(GP%r_in(Natoms,Natoms,N_of_w,iP),GP%r_out(Natoms,Natoms,N_of_w,iP))
+  allocate(GP%l_out(Natoms,Natoms,N_of_w,iP))
+  allocate(Ov(iP,iP),C_coeff(iP),Rhs(iP+1,1),IPIV(iP+1))
+  
 !.......................Calculates and plots Voltage vs Current curve  
 
   if(restart) then
@@ -121,6 +128,7 @@ program StypeJunction_Spinless
   deallocate(work1, work2, work3,work4)
   deallocate(H, Hub, omega)
   !deallocate(SigmaL, SigmaR)
+  deallocate(GP%r_in,GP%r_out,GP%l_out,Ov)
   deallocate(GammaL, GammaR, G_nil)
 end program StypeJunction_Spinless
 
