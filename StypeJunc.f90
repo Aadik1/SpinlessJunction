@@ -121,6 +121,7 @@ program StypeJunction_Spinless
 
   write(22,*) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
   write(22,*) 'Total Runtime:', total_time, 'mins'
+  write(*,*) 'Total Runtime:', total_time, 'mins'
   write(22,*) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
   close(22)
   deallocate(GFf%L, GFf%G,GFf%R, GFf%A)
