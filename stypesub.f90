@@ -2,19 +2,47 @@ subroutine input()
   use GreensFunctions 
   implicit none
   character :: ver
+  character(len=256) :: line, key
+  integer :: ios, eq_pos
   
   open(2, file='input.dat', status='old')
   !...order--> 0 : non-interacting, 1: first order interactions, 2: second order interactions 
-  read(2, *) T, V, Vf, delv, mu, U_int
- 
-  read(2,*) order, method
-  read(2,*) Natoms
-  read(2,*) dw,up,delta
-  read(2,*) pullay, iP
-  read(2,'(a)') ver
 
-  verb=.false. ; if(ver.eq.'Y') verb=.true.
-  read(2,*) restart
+  do
+    read(2,'(A)', iostat=ios) line
+    if (ios .ne. 0) exit   ! end of file
+    if (trim(line) .eq. '' .or. line(1:1) .eq. '#') cycle  ! skip blank or comment
+
+    eq_pos = index(line, "=")
+    if (eq_pos .eq. 0) cycle  ! skip malformed lines
+
+    key = adjustl(trim(line(:eq_pos-1)))
+
+    select case (trim(key))
+    case("T");            read(line(eq_pos+1:),*) T
+    case("Natoms");       read(line(eq_pos+1:),*) Natoms
+    case("V");            read(line(eq_pos+1:),*) V
+    case("Vf");           read(line(eq_pos+1:),*) Vf
+    case("delv");         read(line(eq_pos+1:),*) delv
+       
+    case("method");       read(line(eq_pos+1:),*) method
+    case("mu");           read(line(eq_pos+1:),*) mu
+    case("order");        read(line(eq_pos+1:),*) order
+    case("U_int");        read(line(eq_pos+1:),*) U_int
+    case("dw");           read(line(eq_pos+1:),*) dw
+    case("up");           read(line(eq_pos+1:),*) up
+    case("delta");        read(line(eq_pos+1:),*) delta
+
+    case("iP");           read(line(eq_pos+1:),*) iP
+    case("pulay");        read(line(eq_pos+1:),*) pullay
+    case("ver");          read(line(eq_pos+1:),*) ver
+    case("restart");      read(line(eq_pos+1:),*) restart
+
+    case("E_CC");         read(line(eq_pos+1:),*) E_CC 
+    case("t_hop");        read(line(eq_pos+1:),*) t_hop
+    end select
+  end do
+
   close(2)
   beta = 1.d0/(kb * T)
   if(restart) then

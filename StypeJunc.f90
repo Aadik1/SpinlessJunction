@@ -26,7 +26,7 @@ program StypeJunction_Spinless
   allocate(H(Natoms,Natoms))
   allocate(GammaL(Natoms, Natoms)); allocate(GammaR(Natoms, Natoms))
   
-  call Central_Hamiltonian(H, Natoms, 4.d0, -2.d0)
+  call Central_Hamiltonian(H, Natoms, E_CC, t_hop)
   !call Island_Hamiltonian(H,Natoms)
   
   GammaL = (0.d0, 0.d0); GammaL(1,1) = 1.d0
