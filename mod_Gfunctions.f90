@@ -207,6 +207,12 @@ subroutine SCF_GFs(Volt,first)
 
 !____________ useful if one would like to check the convergence     
 !     write(13,*) iteration, current(Volt)
+
+     
+     if (iteration .gt. 300) then
+        write(*,*) 'No Convergence'
+        STOP
+     end if
      
      if (sqrt(err) .lt. epsilon .or. order .eq. 0) then
         write(*,*)'... REACHED REQUIRED ACCURACY ...'
