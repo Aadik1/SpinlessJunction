@@ -1,6 +1,6 @@
 module DefineHamiltonian
   implicit none
-  integer :: Natoms, N_of_w, Volt_range, order, method
+  integer :: Natoms, N_of_w, Volt_range, order
 
   real*8, dimension(:,:) :: C(3,3)
   real*8, dimension(3) :: Rij, w0
@@ -36,7 +36,6 @@ contains
     end do
     
   end subroutine Central_Hamiltonian
-
   subroutine Island_Hamiltonian(H,N)
     implicit none
     integer :: i, j, N, N_tip, N_surface, connect
@@ -81,5 +80,49 @@ contains
     
   end subroutine Island_Hamiltonian
 
+  subroutine Central_Hamiltonian_xyz(H, N, coords, elements, thop, cutoff)
+    implicit none
+    integer :: N
+    real*8 :: coords(3,N), thop, cutoff
+    character(len=2) :: elements(N)
+    complex*16 :: H(N,N)
+    integer :: i,j
+    real*8 :: dx,dy,dz,dist, onsite_energy
+    
+    H = (0.d0,0.d0)
+    do i=1,N
+       H(i,i) = 0!onsite_energy(elements(i))
+       if (i .le. N) then 
+          do j=i+1,N
+             dx = coords(1,i)-coords(1,j)
+             dy = coords(2,i)-coords(2,j)
+             dz = coords(3,i)-coords(3,j)
+             dist = sqrt(dx*dx+dy*dy+dz*dz)
+             
+             if (dist .le. cutoff) then
+                H(i,j) = thop
+                H(j,i) = thop
+             end if
+          end do
+       end if
+    end do
+  end subroutine Central_Hamiltonian_xyz
+  
+  real*8 function onsite_energy(symbol)
+    implicit none
+    character(len=*) :: symbol
+    select case (trim(symbol))
+    case('C')
+       onsite_energy = 1.d0
+    case('H')
+       onsite_energy = 2.d0
+    case('O')
+       onsite_energy = 3.d0
+    case default
+       onsite_energy = 0.0d0
+    end select
+  end function onsite_energy
+  
   
 end module DefineHamiltonian
+

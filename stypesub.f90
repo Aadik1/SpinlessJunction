@@ -25,7 +25,6 @@ subroutine input()
     case("Vf");           read(line(eq_pos+1:),*) Vf
     case("delv");         read(line(eq_pos+1:),*) delv
        
-    case("method");       read(line(eq_pos+1:),*) method
     case("mu");           read(line(eq_pos+1:),*) mu
     case("order");        read(line(eq_pos+1:),*) order
     case("U_int");        read(line(eq_pos+1:),*) U_int
@@ -33,7 +32,6 @@ subroutine input()
     case("up");           read(line(eq_pos+1:),*) up
     case("delta");        read(line(eq_pos+1:),*) delta
 
-    case("iP");           read(line(eq_pos+1:),*) iP
     case("pulay");        read(line(eq_pos+1:),*) pullay
     case("ver");          read(line(eq_pos+1:),*) ver
     case("restart");      read(line(eq_pos+1:),*) restart

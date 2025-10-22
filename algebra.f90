@@ -80,8 +80,7 @@
     implicit none 
     integer :: n,i,j
     complex*16, dimension(:,:) :: A(n,n), B(n,n)
-    complex*16 :: s
-    real*8 :: trace
+    complex*16 :: s, trace
     
     s = 0.d0
     do i=1,n
@@ -122,4 +121,3 @@
     wi(1) = Ri(2)
     wi(2) = -Ri(1)
   end subroutine VecAssign
-  
